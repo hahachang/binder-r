@@ -1,0 +1,33 @@
+1 + 1
+#CHUNK 3
+# Read the data into an object called "data.full"
+data.full = read.csv("gapMinderDataFiveYear.csv")
+head(data.full)
+summary(data.full)
+head(data.full)
+summary(data.full)
+class(data.full)
+help(sapply)
+sapply(data.full, class)
+help("factor")
+#CHUNK 1
+rm(list=ls())
+# Read the data into an object called data.full:
+data.full <- read.csv("gapminderDataFiveYear.csv")
+runif(nrow(data.full))
+nrow(data.full)
+runif(1
+)
+runif(10)
+set.seed(101)
+data.full$random <- runif(nrow(data.full))
+data.train <- data.full[data.full$random<0.8,]
+data.test <- data.full[data.full$random>=0.8,]
+nrow(data.train)/nrow(data.full)
+nrow(data.test)/nrow(data.full)
+help(geom_histogram)
+help(ggpot2??geom_histogram)
+help(ggpot2.geom_histogram)
+help(ggpot2$geom_histogram)
+??geom_histogram
+library(ggplot2)

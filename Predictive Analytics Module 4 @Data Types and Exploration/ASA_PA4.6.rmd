@@ -1,0 +1,204 @@
+---
+title: "Preditive Analytics Exam Module 4 Section 6"
+output: html_notebook
+---
+
+Run CHUNK 1 to be sure ggplot, gridExtra, and the SOA mortality data are loaded. For all the examples, consider changing plot elements or variables to further explore the data.
+
+```{r echo = FALSE}
+#CHUNK 1
+library(ggplot2)
+library(gridExtra)
+data.mortality <- read.csv("soa_mortality_data.csv")
+```
+
+Run CHUNK 2 to create a split box plot. Note the use of the theme() command to set some characteristics of the plot.
+
+```{r echo = FALSE}
+#CHUNK 2
+p1 <- ggplot(data = data.mortality, aes(x = issstate, y = issage)) +
+        geom_boxplot(alpha = 0.5) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+p1
+```
+
+Run CHUNK 3 to create additional plots. Recall that to use the grid.arrange function, the gridExtra pacakge needs to be loaded.
+
+```{r}
+#CHUNK 3
+
+p1 <- ggplot(data = data.mortality, aes(x = as.factor(year), y = issage, fill = as.factor(year))) +
+        geom_boxplot(alpha = 0.5) 
+p2 <- ggplot(data = data.mortality, aes(x = resind_ind, y = issage, fill = smoker)) +
+        geom_boxplot(alpha = 0.5) 
+p3 <- ggplot(data = data.mortality, aes(x = sex, y = issage, fill = sex)) +
+        geom_boxplot()
+p4 <- ggplot(data = data.mortality, aes(x = smoker, y = issage, fill = smoker)) +
+        geom_boxplot()
+grid.arrange(p1,p2,p3,p4,ncol=2)
+```
+
+Run CHUNK 4 to learn how some variables relate to the actual face amount paid.
+
+```{r}
+#CHUNK 4
+p1 <- ggplot(data = subset(data.mortality, actual_cnt >= 1), 
+             aes(x = resind_ind, 
+                 y = actual_face, 
+                 fill = resind_ind)) +
+        geom_boxplot() +
+        scale_y_log10()
+p2 <- ggplot(data = subset(data.mortality, actual_cnt >= 1), 
+             aes(x = uwkey, 
+                 y = actual_face, 
+                 fill = uwkey)) +
+        geom_boxplot() +
+        scale_y_log10() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p3 <- ggplot(data = subset(data.mortality, actual_cnt >= 1), 
+             aes(x = sex, 
+                 y = actual_face, 
+                 fill = sex)) +
+        geom_boxplot() +
+        scale_y_log10()
+p4 <- ggplot(data = subset(data.mortality, actual_cnt >= 1), 
+             aes(x = smoker, 
+                 y = actual_face, 
+                 fill = smoker)) +
+        geom_boxplot() +
+        scale_y_log10()
+grid.arrange(p1,p2,p3,p4,ncol=2)
+```
+
+Run CHUNK 5 to produce both stacked and split histograms of issue age for each product category.
+
+```{r}
+#CHUNK 5
+## Stacked histogram
+p1 <- ggplot(data = data.mortality, aes(issage, fill=prodcat, ..density..)) +
+       geom_histogram(binwidth = 5, alpha = 0.5)
+
+## Split histogram
+p2 <- ggplot(data = data.mortality, aes(issage, fill=prodcat, ..density..)) +
+       geom_histogram(binwidth = 5, alpha = 0.5, position = "dodge")
+grid.arrange(p1,p2,ncol=1)
+```
+
+Run CHUNK 6 to try this for issue state.
+
+```{r}
+#CHUNK 6
+## Stacked histogram
+p1 <- ggplot(data = data.mortality, aes(issage, fill=issstate, ..density..)) +
+       geom_histogram(binwidth = 5, alpha = 0.5)
+
+## Split histogram
+p2 <- ggplot(data = data.mortality, aes(issage, fill=issstate, ..density..)) +
+       geom_histogram(binwidth = 5, alpha = 0.5, position = "dodge")
+p1
+p2
+```
+
+Run CHUNK 7 to try this for smoking status.
+
+```{r}
+#CHUNK 7
+## Stacked histogram
+p1 <- ggplot(data = data.mortality, aes(issage, fill=smoker, ..density..)) +
+       geom_histogram(binwidth = 5, alpha = 0.5)
+
+## Split histogram
+p2 <- ggplot(data = data.mortality, aes(issage, fill=smoker, ..density..)) +
+       geom_histogram(binwidth = 5, alpha = 0.5, position = "dodge")
+grid.arrange(p1,p2,ncol=1)
+```
+
+Run CHUNK 8 to see a stacked bar chart.
+
+```{r}
+#CHUNK 8
+p1 <- ggplot(data = data.mortality, aes(x = prodcat, fill = smoker)) +
+        geom_bar(stat = "count", alpha = 0.5)
+p2 <- ggplot(data = data.mortality, aes(x = prodcat, fill = smoker)) +
+        geom_bar(stat = "count", alpha = 0.5, position = "dodge")
+p3 <- ggplot(data = data.mortality, aes(x = uwtype, fill = uwkey)) +
+        geom_bar(stat = "count", alpha = 0.5)
+p4 <- ggplot(data = data.mortality, aes(x = uwtype, fill = uwkey)) +
+        geom_bar(stat = "count", alpha = 0.5, position = "dodge")
+grid.arrange(p1,p2,ncol=2)
+grid.arrange(p3,p4,ncol=2)
+```
+
+Run CHUNK 9 to make a scatterplot. Due to the size of the dataset, some of these plots may take a while.
+
+```{r}
+#CHUNK 9
+p1 <- ggplot(data = data.mortality, aes(x = issage, y = duration)) +
+        geom_point(alpha = 0.2)
+p1
+```
+
+Run CHUNK 10A to do the same for duration and actual face amount.
+
+```{r}
+#CHUNK 10A
+p1 <- ggplot(data = data.mortality, aes(x = duration, y = actual_face)) +
+        geom_point(alpha = 0.2) +
+        scale_y_log10()
+p1
+```
+
+The plot notes that some of the records have a face amount of zero, making the log transformation inappriate. Run CHUNK 10B to verify that there are zero values.
+
+```{r}
+#CHUNK 10B
+face.zero <- data.mortality[data.mortality$actual_face == 0, ]
+nrow(data.mortality)
+nrow(face.zero)
+```
+
+That is a lot of records with a value of zero. CHUNK 10C creates a data frame with only the positive values and recreates the plot.
+
+```{r}
+#CHUNK 10C
+data.mortality.posface <- data.mortality[data.mortality$actual_face > 0, ]
+p1 <- ggplot(data = data.mortality.posface, aes(x = duration, y = actual_face)) +
+        geom_point(alpha = 0.2) +
+        scale_y_log10()
+p1
+```
+
+Run CHUNK 11 to make two plots, one splitting by smoker, one by sex.
+
+```{r}
+#CHUNK 11
+p1 <- ggplot(data = data.mortality.posface, aes(x = duration, y = actual_face, color = smoker)) +
+        geom_point(alpha = 0.2) +
+        scale_y_log10()
+p2 <- ggplot(data = data.mortality.posface, aes(x = duration, y = actual_face, color = sex)) +
+        geom_point(alpha = 0.2) +
+        scale_y_log10()
+grid.arrange(p1,p2,ncol=2)
+```
+
+Run CHUNK 12 to look at subsets (note the axis limits on the graphs).
+
+```{r}
+#CHUNK 12
+p1 <- ggplot(data = subset(data.mortality.posface, prodcat == "TRM"), aes(x = duration, y = actual_face, color = smoker)) +
+        geom_point(alpha = 0.5) +
+        scale_y_log10()
+p2 <- ggplot(data = subset(data.mortality.posface, prodcat == "TRM"), aes(x = duration, y = actual_face, color = sex)) +
+        geom_point(alpha = 0.5) +
+        scale_y_log10()
+p3 <- ggplot(data = subset(data.mortality.posface, prodcat == "TRM"), aes(x = duration, y = actual_face, color = smoker)) +
+        geom_point(alpha = 0.5) +
+        scale_x_continuous(limits = c(0, 80)) + 
+        scale_y_log10(limits = c(1, 1.0e+07))
+p4 <- ggplot(data = subset(data.mortality.posface, prodcat == "TRM"), aes(x = duration, y = actual_face, color = sex)) +
+        geom_point(alpha = 0.5) +
+        scale_x_continuous(limits = c(0, 80)) + 
+        scale_y_log10(limits = c(1, 1.0e+07))
+grid.arrange(p1,p2,p3,p4,ncol=2)
+```
+

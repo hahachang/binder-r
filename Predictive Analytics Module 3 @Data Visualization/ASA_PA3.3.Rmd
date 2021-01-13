@@ -1,0 +1,311 @@
+---
+title: "SOA Predictive Analytics Exam, Module 3, Part 3"
+output:
+  html_notebook: default
+  
+---
+
+Load the ggplot2 library and the four data sets used in this chapter.
+
+```{r}
+# In this chapter we will discuss some useful features of ggplot that also commonly cause trouble. They have to do with how to tell ggplot more about the internal structure of your data (grouping), how to break up your data into pieces for a plot (faceting), and how to get ggplot to perform some calculations on or summarize your data before producing the plot (transforming).
+
+library(ggplot2)
+gapminder <- read.csv(file="gapMinderDataFiveYear.csv")
+gss_sm <- read.csv(file = "gss_sm.csv")
+titanic <- read.csv(file = "titanic.csv")
+oecd_sum <- read.csv(file = "oecd_sum.csv")
+```
+
+This chunk starts off with the Example from Section 4.2. Modify it to create the second example.
+
+```{r}
+p <- ggplot(data = gapminder,
+            mapping = aes(x = year,
+                          y = gdpPercap))
+p + geom_line()
+p + geom_line(aes(group = country))
+
+# The group aesthetic is usually only needed when the grouping information you need to tell ggplot about is not built-in to the variables being mapped. For example, when we were plotting the points by continent, mapping color to continent was enough to get the right answer, because continent is already a categorical variable, so the grouping is clear. When mapping the x to year, however, there is no information in the year variable itself to let ggplot know that it is grouped by country for the purposes of drawing lines with it. So we need to say that explicitly.
+```
+
+Use the following chunk for Section 4.3 on faceting. It creates the first graph. Use it to create the more complex one that follows.
+
+```{r}
+p <- ggplot(data = gapminder,
+            mapping = aes(x = year,
+                          y = gdpPercap))
+p + geom_line(aes(group = country)) +
+  facet_wrap(~continent)
+
+p + geom_line(aes(group = country)) +
+  geom_smooth(size = 1.1, method = "loess", se = FALSE) +
+  scale_y_log10(labels = scales::dollar) +
+  facet_wrap(~continent, ncol = 5) +
+  labs(x = "Year", y = "GDP per capita", title = "GDP per capita on Five Continents")
+```
+
+You will now work with a new dataset, gss_sm. The following chunkmakes the first graph that uses it. You may want to do some numerical exploring of the data set as well to learn about the 32 variables. You can also use glimpse() as noted in the text
+
+```{r}
+p <- ggplot(data = gss_sm,
+            mapping = aes(x = age, y = childs))
+p + geom_point(alpha = 0.2) +
+  geom_smooth() +
+  facet_grid(sex ~ race)
+p + geom_point(alpha = 0.2) +
+  geom_smooth() +
+  facet_grid(~ sex + race)
+p + geom_point(alpha = 0.2) +
+  geom_smooth() +
+  facet_wrap(~ sex + race, ncol = 6)
+```
+
+Use this chunk to work on the bar charts in Section 4.4
+
+```{r}
+p <- ggplot(data = gss_sm,
+            mapping = aes(x = bigregion))
+p + geom_bar()
+p + geom_bar(mapping = aes(y = ..prop.., group = 1))
+```
+
+Use this chunk to work with bar charts on the religion variable
+
+```{r}
+p <- ggplot(data = gss_sm,
+            mapping = aes(x = religion, color = religion))
+p + geom_bar()
+p <- ggplot(data = gss_sm,
+            mapping = aes(x = religion, fill = religion))
+p + geom_bar()
+p + geom_bar() + guides(fill = FALSE)
+```
+
+Use this chunk to combine region and religion
+
+```{r}
+p <- ggplot(data = gss_sm,
+            mapping = aes(x = bigregion, fill = religion))
+p + geom_bar()
+p + geom_bar(position = "fill")
+p + geom_bar(position = "dodge")
+p + geom_bar(position = "dodge", mapping = aes(y = ..prop..))
+p + geom_bar(position = "dodge", mapping = aes(y = ..prop.., group = religion))
+p <- ggplot(data = gss_sm,
+            mapping = aes(x = religion))
+p + geom_bar(position = "dodge", 
+             mapping = aes(y = ..prop.., group = bigregion)) + 
+  facet_wrap(~bigregion, ncol = 1)
+```
+
+The next chunk is for the histograms in Section 4.6. The dataset comes with ggplot2 and so doesn't need to be loaded.
+
+```{r}
+p <- ggplot(data = midwest,
+            mapping = aes(x = area))
+p + geom_histogram()
+p + geom_histogram(bins = 10)
+```
+
+Kernel density estimators are a way to smooth a histogram. This chunck starts that process.
+
+```{r}
+p <- ggplot(data = midwest,
+            mapping = aes(x = area))
+p + geom_density()
+p <- ggplot(data = midwest,
+            mapping = aes(x = area, fill = state, color = state))
+p + geom_density(alpha = 0.3)
+```
+
+This chunk can be used with Section 4.7.
+
+```{r}
+p <- ggplot(data = titanic,
+            mapping = aes(x = fate, y = percent, fill = sex))
+p + geom_bar(position = "dodge", stat = "identity") +
+  theme(legend.position = "top")
+```
+
+This chunk can be used for the examples with the oecd dataset.
+
+```{r}
+head(oecd_sum)
+p <- ggplot(data = oecd_sum, mapping = aes(x = year, y = diff, fill = hi_lo))
+
+p + geom_col() + guides(fill = FALSE)
+
+
+```
+
+
+
+Insurance Industry Practice
+
+The dataframe mort_data contains a subset of experience data including attained age, sex, and smoker status. Each cell contains the expected mortality rate from the prior mortality table, the actual mortality rate that was observed for the specific cell, and the number of years of exposure.
+
+The ultimate objective would be to create statistically credible actual-to-expected (A/E) factors to be used true-up the expected mortality rates to become consistent with the observed mortality. For this module, the objective is to use ggplot2 to explore the data, get a feel for how credible it is, and show how the A/E rates vary by age, sex, and smoker status. 
+
+The solutions to the problems follow.
+
+1- As a first cut of how credible the data is by age, create a histogram that shows how many rows of data we have for each attained age. Is this really what we want?
+```{r Solve1}
+mort_data <- read.csv("mortality_data.csv")
+head(mort_data)
+p <- ggplot(data = mort_data, mapping = aes(x = attage))
+p + geom_histogram()
+```
+
+2- Change the histogram so that the height of each bar represents the sum of the exposures in that bin. Add a y-axis label to clarify that this is what the graph depicts.
+```{r Solve2}
+p <- ggplot(data = mort_data, mapping = aes(x = attage))
+p + geom_histogram() +
+  labs(y = "sum of exposure")
+p + geom_histogram(aes(weight = exposure)) +
+  labs(y = "sum of exposure")
+
+```
+
+3- Now, use colors to divide the histogram according to sex.
+```{r Solve3}
+p <- ggplot(data = mort_data, mapping = aes(x = attage))
+p + geom_histogram(aes(weight = exposure, fill = sex, alpha = 0.5)) +
+  labs(y = "sum of exposure")
+
+```
+
+4- It probably isn't worthwhile to include the cells with unknown sex. Repeat the above, but only with the subset of data for which sex is known.
+```{r Solve4}
+p <- ggplot(data = subset(mort_data, subset = sex %in% c("F", "M")), 
+            mapping = aes(x = attage))
+p + geom_histogram(aes(weight = exposure, fill = sex, alpha = 0.5)) +
+  labs(y = "sum of exposure")
+```
+
+5- Create a scatterplot that shows the actual-to-expected (A/E) ratio for each cell (hint: the A/E ratio is the actual rate mortality rate divided by the expected mortality rate. This ratio can be calculated for each row and included in the graph by simply setting the y aesthetic equal to the ratio, i.e. "y = actual_mort/expected_mort"). Have the two sexes be two different colors, and add two trend lines, one associated with each sex. In the scatterplot, exclude the data beyond age 95 and adjust the y-axis to show the range of 0-2, which is what intests us the most.
+```{r Solve5}
+p <- ggplot(data = subset(mort_data, subset = sex %in% c("F", "M")), 
+            mapping = aes(x = attage, 
+                          y = actual_mort/expected_mort, 
+                          color = sex,
+                          fill = sex))
+p + geom_point(alpha = .2) + 
+  geom_smooth() + 
+  coord_cartesian(ylim = c(0,2)) +
+  xlim(50, 95)
+```
+
+6- Now, split the above graph into three side-by-side graphs, one for each of the three smoking categories.
+```{r Solve6}
+p <- ggplot(data = subset(mort_data, subset = sex %in% c("M","F")),
+            mapping = aes(x = attage,
+                          y = actual_mort/expected_mort,
+                          color = sex,
+                          fill = sex))
+p + geom_point(alpha = .2) +
+  geom_smooth() +
+  coord_cartesian(ylim = c(0,2)) +
+  xlim(50,95) +
+  facet_wrap(~ smoker)
+
+```
+
+7- Finally, clean up the prior graph by fine-tuning the limits of the graph and adding labels.
+```{r Solve7}
+p <- ggplot(data = subset(mort_data, subset = sex %in% c("M","F")),
+            mapping = aes(x = attage,
+                          y = actual_mort/expected_mort,
+                          color = sex,
+                          fill = sex))
+p + geom_point(alpha = .2) +
+  geom_smooth() +
+  coord_cartesian(ylim = c(.25,1.5)) +
+  xlim(50,95) +
+  facet_grid(~ smoker) +
+  labs(x  = "Attained Age",
+       y = "A/E",
+       color = "Sex",
+       fill = "Sex",
+       title = "Mortality A/E Ratios",
+       subtitle = "by sex, smoker status, and attained age",
+       caption = "based on synthetic data \n for educational use only"
+       )
+```
+
+
+```{r Solution}
+# First, load package and data
+library(ggplot2)
+mort_data <- read.csv("mortality_data.csv")
+
+#1
+p <- ggplot(data = mort_data, mapping = aes(x = attage))
+p + geom_histogram()
+
+#2
+p <- ggplot(data = mort_data, mapping = aes(x = attage))
+p + geom_histogram(aes(weight = exposure)) +
+  labs(y = "sum of exposure")
+
+
+#3
+p <- ggplot(data = mort_data, mapping = aes(x = attage))
+p + geom_histogram(aes(weight = exposure, fill = sex), alpha = .5) +
+  labs(y = "sum of exposure")
+
+#4
+p <- ggplot(data = subset(mort_data, subset = sex %in% c("M","F")),
+                          mapping = aes(x = attage))
+p + geom_histogram(aes(weight = exposure, fill = sex), alpha = .5) +
+  labs(y = "sum of exposure")
+ 
+
+#5
+p <- ggplot(data = subset(mort_data, subset = sex %in% c("M","F")),
+            mapping = aes(x = attage, 
+                          y = actual_mort/expected_mort, 
+                          color = sex, 
+                          fill = sex))
+p + geom_point(alpha = .2) + 
+  geom_smooth() + 
+  coord_cartesian(ylim = c(0,2)) +
+  xlim(50,95)
+
+#6
+p <- ggplot(data = subset(mort_data, subset = sex %in% c("M","F")),
+            mapping = aes(x = attage,
+                          y = actual_mort/expected_mort,
+                          color = sex,
+                          fill = sex))
+p + geom_point(alpha = .2) +
+  geom_smooth() +
+  coord_cartesian(ylim = c(0,2)) +
+  xlim(50,95) +
+  facet_wrap(~ smoker)
+
+#7
+
+p <- ggplot(data = subset(mort_data, subset = sex %in% c("M","F")),
+            mapping = aes(x = attage,
+                          y = actual_mort/expected_mort,
+                          color = sex,
+                          fill = sex))
+p + geom_point(alpha = .2) +
+  geom_smooth(method = loess) +
+  coord_cartesian(ylim = c(.25,1.5)) +
+  xlim(50,95) +
+  facet_grid(~ smoker) +
+  labs(x  = "Attained Age",
+       y = "A/E",
+       color = "Sex",
+       fill = "Sex",
+       title = "Mortality A/E Ratios",
+       subtitle = "by sex, smoker status, and attained age",
+       caption = "based on synthetic data \n for educational use only"
+       )
+
+```
+
+
+

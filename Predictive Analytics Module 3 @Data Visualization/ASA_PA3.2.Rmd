@@ -1,0 +1,289 @@
+---
+title: "SOA Predictive Analytics Exam, Module 3, Part 2"
+output:
+  html_notebook: default
+  
+---
+
+Use the space below to do the exercises as described in Chapter 3 of the text. As explained in the text, typing out the code is the best way to learn the material. 
+
+As already mentioned, the gapminder library will not be available in the exam. That is okay, since the only thing the gapminder library does is provide easy access to the gapminder data used in the examples. With that in mind, you can use read.csv to access the gapminder data that was provided in an earlier section of this module.
+
+Load the gampminder data (which you should already have in your working directory). 
+
+```{r}
+rm(list=ls())
+library(ggplot2)
+gapminder <- read.csv(file="gapMinderDataFiveYear.csv")
+
+
+```
+
+The following chunk repeats the code from Chapter 2 and produces the graph again as seen in Section 3.4. All of this could have been done in one line.
+
+```{r}
+# Identify the data
+p <- ggplot(data = gapminder)
+
+# Add the mapping
+p <- p + (mapping = aes(x = gdpPercap, y = lifeExp))
+
+#Ask for a scatterplot
+p <- p + geom_point()
+
+#Display the graph
+p
+```
+
+Section 3.4 can be done in the following chunk. It is set up to make the first plot in that section. Conitnue by adding or modifying the code and rerun as needed. Note that the scales package will not be available at the exam.
+
+```{r}
+p <- ggplot(data=gapminder, mapping = aes(x = gdpPercap, y = lifeExp))
+p + geom_smooth()
+
+p <- ggplot(data=gapminder, mapping = aes(x = pop, y = lifeExp))
+p + geom_smooth()
+
+p <- ggplot(data=gapminder, mapping = aes(x = gdpPercap, y = lifeExp, color = year))
+p + geom_smooth() + geom_point() + scale_x_log10()
+
+p <- ggplot(data=gapminder, mapping = aes(x = gdpPercap, y = lifeExp, color = factor(year)))
+p + geom_smooth() + geom_point() + scale_x_log10()
+```
+
+Section 3.5 adds additional features to the graph. The chunk starts with the basics from before, but with further editing needed to reproduce the work. Try out options beyond those presented in the examples or vary some of the presented options to see what changes.
+
+```{r}
+p <- ggplot(data=gapminder,
+            mapping = aes(x = gdpPercap,
+                          y = lifeExp))
+p + geom_point() +
+  geom_smooth(method = "gam") +
+  scale_x_log10()
+
+p + geom_point() +
+  geom_smooth(method = "loess") +
+  scale_x_log10()
+
+p + geom_point() +
+  geom_smooth(method = "loess") +
+  scale_x_log10(labels = scales::dollar)
+
+p + geom_point(color = "blue") +
+  geom_smooth(method = "loess") +
+  scale_x_log10()
+
+p + geom_point() +
+  geom_smooth(method = "lm") +
+  scale_x_log10()
+
+p + geom_point(alpha = 0.3) +
+  geom_smooth(method = "gam") +
+  scale_x_log10(labels = scales::dollar) +
+  labs(x = "GDP Per Capita", y = "Life Expectancy in Years",
+       title = "Economic Growth and Life Expectancy",
+       subtitle = "Data points are country-years",
+       caption = "Source: Gapminder.")
+
+p <- ggplot(data=gapminder,
+            mapping = aes(x = gdpPercap,
+                          y = lifeExp,
+                          color = continent))
+p + geom_point() +
+  geom_smooth() +
+  scale_x_log10()
+
+p <- ggplot(data=gapminder,
+            mapping = aes(x = gdpPercap,
+                          y = lifeExp,
+                          color = continent,
+                          fill = continent))
+p + geom_point() +
+  geom_smooth() +
+  scale_x_log10()
+```
+
+Section 3.6 places the mapping inside the geom. This chunk starts off the first exmaple
+
+```{r}
+p <- ggplot(data=gapminder,
+            mapping = aes(x = gdpPercap,
+                          y = lifeExp))
+p + geom_point(mapping = aes(color = continent)) +
+  geom_smooth(method = "loess") +
+  scale_x_log10()
+
+p + geom_point(mapping = aes(color = log(pop))) +
+  scale_x_log10()
+
+
+```
+
+Section 3.7 provides ways of saving graphs. For your exam, knitr will not be available for saving files. However, ggsave is available to save the graph as a png file. You may also prefer to simply copy and paste the graphs into your Word document. The following chunk saves a file.
+
+```{r}
+p <- ggplot(data=gapminder,
+            mapping = aes(x = gdpPercap,
+                          y = lifeExp))
+p.1 <- p + geom_point(mapping = aes(color = continent)) +
+  geom_smooth(method = "loess") 
+
+ggsave("gapminder.png", plot = p.1)
+```
+
+
+Insurance Industry Practice
+
+In the space below, let's practice what we learned in this chapter by doing the following things. The solutions to the problems follow.
+
+1- Using mortality_data.csv, recreate the scatterplot that shows the mortality rate by age
+```{r Solve1}
+mort_data <- read.csv("mortality_data.csv")
+head(mort_data)
+p <- ggplot(data = mort_data, mapping = aes(x = attage, 
+                                            y = actual_mort))
+p + geom_point()
+
+```
+
+
+2- Some of the black points are close together and overlapping. set the color of the points to a light gray so we can tell when points are overlapping.
+```{r Solve2}
+p <- ggplot(data = mort_data, mapping = aes(x = attage, 
+                                            y = actual_mort))
+p + geom_point(alpha = 0.3)
+
+```
+
+3- Now create a graph without the data points, but rather with a smooth line with a ribbon that shows the standard error.
+Does the standard error on this appear reasonable? Why not? 
+```{r Solve3}
+p <- ggplot(data = mort_data, mapping = aes(x = attage, 
+                                            y = actual_mort))
+p + geom_smooth()
+
+```
+
+4- Later in the course, we'll apply a generalized linear model set up that is valid for modeling mortality rates and reflects the fact that mortlaity rates cannot be negative. The graph here is a less look at the trends we see in the data. For now, edit the graph so that the standard error ribbon is removed.
+```{r Solve4}
+p <- ggplot(data = mort_data, mapping = aes(x = attage, 
+                                            y = actual_mort))
+p + geom_smooth(se = FALSE)
+
+```
+
+5- Now, add the scatterplot points back to the graph with the line
+```{r Solve5}
+p <- ggplot(data = mort_data, mapping = aes(x = attage, 
+                                            y = actual_mort))
+p + geom_smooth(se = FALSE) + geom_point()
+p + geom_point() + geom_smooth(se = FALSE)
+
+```
+
+6- Now, have the color of the lines and points vary by smoker status
+Are the result of this surprising? 
+```{r Solve6}
+p <- p + (mapping = aes(color = smoker))
+p + geom_smooth(se = FALSE) + geom_point()
+
+```
+
+7- This looks weird--the smoker class appears to have a lower mortality rate than the nonsmoker class. Does this trend exist at lower ages? It is hard to tell. The scale of this graph focuses on the outliers at the very high ages. Change the graph so that the y scale goes from 0 to 0.20 so that we can better see the relationship between the lines at the more important ages.
+```{r Solve7}
+p + geom_smooth(se = FALSE) + geom_point() + coord_cartesian(ylim = c(0, 0.2))
+
+```
+
+8- Now, add the following labels to the graph:
+
+Title: "Mortality Study"
+Subtitle: "Dots are exposure units"
+Caption: "Disclaimer--for educational purposes only"
+x-axis label: "Attained Age"
+y-axix label: "Mortality Rate"
+Also, change the key of the colors to read "Smoker Status" rather than the name of the filed (smoker)
+```{r Solve8}
+p + geom_smooth(se = FALSE) + 
+  geom_point() + 
+  coord_cartesian(ylim = c(0, 0.2)) +
+  labs(title = "Mortality Study", 
+       subtitle = "Dots are exposure units",
+       caption = "Disclaimer--for educational purposes only",
+       x = "Attained Age",
+       y = "Mortality Rate",
+       color = "Smoker Status")
+```
+
+9- As an alternative to truncating the y axis at 0.20 chnage the graph to use a log scale on the y-axis. What new problem is created with this approach?
+```{r Solve9}
+p + geom_smooth(se = FALSE) + 
+  geom_point() + 
+  scale_y_log10()
+
+```
+
+
+
+
+```{r Solution}
+library(ggplot2)
+
+#1
+mort_data <- read.csv("mortality_data.csv")
+p <- ggplot(data = mort_data, mapping = aes(x = attage, y = actual_mort))
+p + geom_point()
+
+#2
+mort_data <- read.csv("mortality_data.csv")
+p <- ggplot(data = mort_data, mapping = aes(x = attage, y = actual_mort))
+p + geom_point(alpha = .3)
+
+#3
+p <- ggplot(data = mort_data, mapping = aes(x = attage, y = actual_mort))
+p + geom_smooth() 
+#You should note that the intervals include negative values, which are not possible.
+
+#4
+p <- ggplot(data = mort_data, mapping = aes(x = attage, y = actual_mort))
+p + geom_smooth(se = FALSE) 
+
+#5
+p <- ggplot(data = mort_data, mapping = aes(x = attage, y = actual_mort))
+p + geom_smooth(se = FALSE) + geom_point(alpha = .3)
+
+#6
+p <- ggplot(data = mort_data, mapping = aes(x = attage, y = actual_mort, color = smoker))
+p + geom_smooth(se = FALSE) + geom_point(alpha = .3)
+
+#7
+p <- ggplot(data = mort_data, mapping = aes(x = attage, y = actual_mort, color = smoker))
+p + geom_smooth(se = FALSE) + geom_point(alpha = .3) + coord_cartesian(ylim = c(0,.2))
+
+#8
+p <- ggplot(data = mort_data, mapping = aes(x = attage, y = actual_mort, color = smoker))
+p + geom_smooth(se = FALSE) + 
+  geom_point(alpha = .3) + 
+  coord_cartesian(expand = FALSE, ylim = c(0,.25)) +
+  labs(title = "Mortality Study",
+  subtitle = "Dots are exposure units",
+  caption = "Disclaimer--for educational purposes only",
+  x = "Attained Age",
+  y = "Mortality Rate",
+  color = "Smoker Status")
+  
+#9
+p <- ggplot(data = mort_data, mapping = aes(x = attage, y = actual_mort, color = smoker))
+p + geom_smooth(se = FALSE) + 
+  geom_point(alpha = .3) + 
+  scale_y_log10() +
+  labs(title = "Mortality Study",
+  subtitle = "Dots are exposure units",
+  caption = "Disclaimer--for educational purposes only",
+  x = "Attained Age",
+  y = "Mortality Rate",
+  color = "Smoker Status")
+#Many observed values are zero. The logarithm cannot be taken and so those points are not plotted. 
+  
+```
+

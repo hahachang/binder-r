@@ -1,0 +1,133 @@
+---
+title: 'Predictive Analytics Exam Module 5 Section 3'
+output:
+  html_notebook: default
+  
+---
+
+Run CHUNK 1 to load the mortality data and ggplot2.
+
+```{r echo = FALSE}
+#CHUNK 1
+data.mortality <- read.csv("soa_mortality_data.csv")
+library(ggplot2)
+```
+
+Run CHUNK 2 to check for outliers in the duration variable.
+
+```{r echo = FALSE}
+#CHUNK 2
+library(gridExtra)
+p1 <- ggplot(data = data.mortality, aes(duration, ..density..)) +
+       geom_histogram(binwidth = 1, fill = "blue", alpha = 0.5)
+p2 <- ggplot(data = data.mortality, aes(x = "duration", y = duration)) +
+        geom_boxplot(fill = "blue", alpha = 0.5) 
+grid.arrange(p1,p2,ncol=2)
+```
+
+In CHUNK 3 modify the code from CHUNK 2 to check for outliers in the duration variable after a log transformation.
+
+```{r echo = FALSE}
+#CHUNK 3
+p1 <- ggplot(data = data.mortality, aes(log(duration), ..density..)) +
+       geom_histogram(binwidth = 0.1, fill = "blue", alpha = 0.5)
+p2 <- ggplot(data = data.mortality, aes(x = "log(duration)", y = log(duration))) +
+        geom_boxplot(fill = "blue", alpha = 0.5)
+grid.arrange(p1,p2,ncol=2)
+```
+
+CHUNK 4 has the modified code.
+
+```{r echo = FALSE}
+#CHUNK 4
+data.mortality$durationLog <- log(data.mortality$duration)
+p1 <- ggplot(data = data.mortality, aes(durationLog, ..density..)) +
+       geom_histogram(binwidth = 0.1, fill = "blue", alpha = 0.5) 
+p2 <- ggplot(data = data.mortality, aes(x = "duration", y = durationLog)) +
+        geom_boxplot(fill = "blue", alpha = 0.5) 
+grid.arrange(p1,p2,ncol=2)
+```
+
+Run CHUNK 5 to see the effect of an outlier on a regression line.
+
+```{r echo = FALSE}
+#CHUNK 5
+#The x-values are uniform(0,10) random numbers
+#The y-values are the x-values plus a standard normal variable.
+sample.x <- runif(10, min = 0, max = 10)
+sample.y <- sample.x + rnorm(10, 0, 1)
+#The "real" regression line should be rougly the line y=x.
+line.real <- lm(sample.y~sample.x)
+#Now change the tenth y-value to 50, an outlier
+sample.y[10] = 50
+#Redo the regression.
+line.bias <- lm(sample.y~sample.x)
+#Plot the two regression lines.
+plot(sample.y~sample.x)
+abline(line.real, col = "blue")
+abline(line.bias, col = "red")
+```
+
+Run CHUNK 6 to revisit the duration variable on a log scale.
+
+```{r echo = FALSE}
+#CHUNK 6
+
+p1 <- ggplot(data = data.mortality, aes(x = "duration", y = duration)) +
+        geom_boxplot(fill = "orange", alpha = 0.5) +
+        scale_y_log10()
+p2 <- ggplot(data = data.mortality, aes(x = prodcat, y = duration)) +
+        geom_boxplot(fill = "orange", alpha = 0.5) +
+        scale_y_log10()
+grid.arrange(p1,p2,ncol=2)
+```
+
+CHUNK 7 makes a graph that illustrates the difference between squared and absolute error. It is provided here in case you are interested in how the graph was made.
+
+```{r echo = FALSE}
+#CHUNK 7
+
+x <- seq(-1.5,1.5,0.1)
+errors <- data.frame(error = x,
+                     squared = x^2,
+                     abs = abs(x))
+
+ggplot(data = errors, aes(x = error)) +
+  geom_line(aes(y = squared), color = "red") +
+  geom_line(aes(y = abs), color = "blue") +
+  geom_line(aes(y = 1)) +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = 1, fill = "yellow", alpha = 0.2) + 
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 1, ymax = Inf, fill = "orange", alpha = 0.2)
+
+```
+
+Run CHUNK 8 to examine duration versus actual face for term insurance products.
+
+```{r}
+#CHUNK 8
+p1 <- ggplot(data = subset(data.mortality, prodcat == "TRM"), aes(x = duration, y = actual_face)) +
+        geom_point(alpha = 0.5) +
+        scale_x_continuous(limits = c(0, 80)) + 
+        scale_y_log10(limits = c(1, 1.0e+07)) +
+        annotate("rect", xmin = 39, xmax = 43, ymin = 600, ymax = 10000, fill = "red", alpha = 0.2)
+p1
+```
+
+Run CHUNK 9 to see an example where one variable is categorical and the other is numeric.
+
+```{r}
+#CHUNK 9
+p1 <- ggplot(data = subset(data.mortality, actual_cnt >= 1), aes(x = smoker, y = issage, fill = smoker)) +
+        geom_boxplot() 
+p2 <- ggplot(data = subset(data.mortality, actual_cnt >= 1), aes(x = "smoker", y = issage)) +
+        geom_boxplot() 
+grid.arrange(p1,p2,ncol=2)
+```
+
+Run CHUNK 10 to make a frequency table of distribution channel and smoking status.
+
+```{r}
+#CHUNK 10
+tbl <- table(data.mortality$distchan, data.mortality$smoker)
+tbl
+```

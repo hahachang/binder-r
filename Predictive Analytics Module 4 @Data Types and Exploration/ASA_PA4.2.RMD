@@ -1,0 +1,123 @@
+---
+title: "Predictive Analytics Exam Module 4 Section 2"
+output: html_notebook
+---
+Run CHUNK 1 to load the Gapminder Five Year data set you have previously used. Be sure the working directory is properly set so the dataset can be found.
+
+```{r eval=FALSE, echo=FALSE}
+#CHUNK 1
+data.all <- read.csv("gapMinderDataFiveYear.csv")
+head(data.all)
+```
+
+Now run CHUNK 2 to see two of the non-numeric variables in the dataset.
+
+```{r echo = FALSE}
+#CHUNK 2
+data.all[data.all$year == 2007, c("country","continent")][1:10,]
+#The first column is the row number from the original dataset before those with year = 2007 were selected.
+```
+
+Run CHUNK 3 to see the levels of one of the variables.
+
+```{r}
+#CHUNK 3
+levels(data.all$continent)
+```
+
+Run CHUNK 4 to see examples of numeric variables.
+
+```{r echo = FALSE}
+#CHUNK 4
+data.all[1:10, c("year","pop", "lifeExp", "gdpPercap")]
+```
+
+CHUNK 5 shows how the dummyVars formula in the caret package can be used to binarize the continent variable. Keep in mind that many programs automatically treat factor variables as if they had been binarized without doing so in advance.
+
+```{r echo=FALSE}
+#CHUNK 5
+library(caret)
+
+#The sep = "_" indincates an underscore is to be used to name the new variables.
+continent.binarized <- predict(dummyVars(formula = "~ continent", data.all, sep = '_'), data.all)
+data.binarized <- cbind(data.all, continent.binarized)
+data.binarized[data.binarized$year == 2007, ][1:10,]
+```
+
+CHUNK 6 presents an alternative where one of the factor levels is arbitrarily left out. This is done by setting fullRank = TRUE. It is usually necessary to do this to ensure that there are unique coefficients estimates.
+
+```{r echo = FALSE}
+
+#CHUNK 6
+
+#The sep = "_" indincates an underscore is to be used to name the new variables.
+continent.binarized2 <- predict(dummyVars(formula = "~ continent", data.all, sep = '_', fullRank = TRUE), data.all)
+data.binarized2 <- cbind(data.all, continent.binarized2)
+data.binarized2[data.binarized2$year == 2007, ][1:10,]
+```
+
+Run CHUNK 7 to load the 911 data and assign more meaningful names to the variables.
+
+```{r echo = FALSE}
+#CHUNK 7
+data.911 <- read.csv("911.csv")
+head(data.911)
+colnames(data.911) <- c("Latitude", "Longitude", "Description", "Zip Code", "Title", "Time Stamp", "Zone", "Address", "E")
+head(data.911)
+
+data.911[1:10,-c(9)]
+```
+
+CHUNK 8 evaluates the dimensionality of two variables.
+
+```{r}
+#CHUNK 8
+length(levels(data.911$Zone))
+length(levels(data.911$Title))
+```
+
+CHUNK 9 makes a bar chart of the exposures for the top levels of two of the factors.
+
+```{r}
+#CHUNK 9
+
+library(ggplot2)
+ggplot(data = data.911, aes(Zone)) +
+  geom_bar()
+
+summary(data.911$Zone)[1:10] # Show the top ten levels for the Zone factor
+
+ggplot(data = data.911, aes(Title)) +
+  geom_bar()
+
+summary(data.911$Title)[1:10] # Show the top ten levels for the Title factor
+```
+
+CHUNK 10 provides space for you to work on the Exercise. The questions are repeated here.
+
+a) Classify what type of variable it is - there may be more than one type that is appropriate (character, factor, continuous, discrete, Boolean, date/time/location)
+b) Identify the range of the variable (the different levels for categorical)
+c) For each categorical variable, decide whether it is low, medium or high dimensionality.
+d) Are there any variables for which you could consider alternative granularity (assuming you have the data available)?
+e) Which variables have an order associated with them (or have a sensible one that can be defined)?
+```{r}
+data.all <- read.csv("gapminderDataFiveYear.csv")
+```
+
+```{r eval=FALSE, echo=FALSE}
+#CHUNK 10
+head(data.all)
+length(levels(data.all$country))
+length(levels(data.all$continent))
+
+
+```
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,56 @@
+---
+title: "Predictive Analytics Exam Module 4 Section 4"
+output: html_notebook
+---
+
+Run CHUNK 1 to load the gapminder dataset used previously. It should be in your working directory.
+
+```{r}
+#CHUNK 1
+# Data
+data.gmd <- read.csv("gapminderDataFiveYear.csv")
+```
+
+Each of CHUNKS 2-6 generates a sample from this dataset. Try and identify from the code what type of sample is generated in each case. 
+
+```{r}
+#CHUNK 2
+library(caret)
+data.split <- split(data.gmd, data.gmd$continent)
+samples <- lapply(data.split, function(x) x[sample(1:nrow(x), size = 5, replace = FALSE),])
+data.sample1 <- do.call(rbind,samples)
+data.sample1
+```
+
+```{r}
+#CHUNK 3
+data.sample2 <- data.gmd[sample(1:nrow(data.gmd), size = 20, replace = FALSE),]
+data.sample2
+```
+
+```{r}
+#CHUNK 4
+data.sample3 <- data.gmd[data.gmd$continent == "Africa",]
+data.sample3
+```
+
+```{r}
+#CHUNK 5
+data.sub1 <- data.gmd[data.gmd$continent != "Oceania",]
+data.sub2 <- data.gmd[data.gmd$continent == "Oceania",]
+
+data.sample4 <- rbind(data.sub1[sample(1:nrow(data.sub1), size = 1000, replace = FALSE),],
+                      data.sub2[sample(1:nrow(data.sub2), size = 1000, replace = TRUE),])
+data.sample4
+```
+
+```{r}
+#CHUNK 6
+library(caret)
+samples <- createDataPartition(data.gmd$continent, p = 0.1)
+
+data.sample5 <- data.gmd[ samples$Resample1, ]
+data.sample5
+```
+
+

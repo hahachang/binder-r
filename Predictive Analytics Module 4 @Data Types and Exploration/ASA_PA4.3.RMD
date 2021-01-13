@@ -1,0 +1,205 @@
+---
+title: "Predictive Analytics Exam Module 4 Section 3"
+output: html_notebook
+---
+
+Run CHUNK 1 to see the simple example dataset.
+
+```{r echo = FALSE}
+#CHUNK 1
+data.test <- data.frame(Name = c("John", "Amy", "", "Jordan", "Kate"),
+                        Age = c(23, 22, 38, 31, NA),
+                        Religion = c("Christian", "", "Atheist", "Muslim", "Muslim"),
+                        Income = c(100000, -1, -1, -1, -110000))
+
+data.test
+```
+
+Run CHUNKS 2-4 to create a new object that only has rows for which Age is not NA.
+
+```{r}
+#CHUNK 2
+#Get a true/false list of all rows with NA
+na.check <- is.na(data.test$Age) # Note we are only checking the Age column
+na.check
+data.test[!na.check,]
+```
+
+```{r}
+#CHUNK 3
+#Negate the list
+not.na <- !na.check
+not.na
+data.test[not.na,]
+```
+
+```{r}
+#CHUNK 4
+#Select only those rows in the original dataframe that are not NA
+data.test.new <- data.test[not.na,] # [(row selection), (column selection)] = [not.na, (blank)] - blank means "all"
+data.test.new
+```
+
+Run CHUNKS 5-6 to remove the Income column.
+
+```{r}
+#CHUNK 5
+#Work out which columns we want to keep
+allCols <- colnames(data.test)
+drop <- c("Income")
+keep <- setdiff(allCols, drop)
+keep
+
+```
+
+```{r}
+#CHUNK 6
+#Select only those columns that you want to keep
+data.test.new2 <- data.test.new[,keep]  # [(row selection), (column selection)] = [(blank), keep] - blank means "all"
+data.test.new2
+```
+
+Run CHUNK 7 to see that this can all be accomplished on one command.
+
+```{r}
+#CHUNK 7
+data.test.new <- data.test[!is.na(data.test$Age),setdiff(colnames(data.test),c("Income"))]
+data.test.new
+```
+
+Run CHUNK 8 to see the original dataset again.
+
+```{r echo = FALSE}
+#CHUNK 8
+data.test <- data.frame(Name = c("John", "Amy", "", "Jordan", "Kate"),
+                        Age = c(23, 22, 38, 31, NA),
+                        Religion = c("Christian", "", "Atheist", "Muslim", "Muslim"),
+                        Income = c(100000, -1, -1, -1, 110000))
+
+data.test
+```
+
+Run CHUNKS 9-10 to inpute values for Age and Religion where they are currently missing.
+
+```{r}
+#CHUNK 9
+data.test.new3 <- data.test # make a copy so we can make changes without affecting the original
+#Replace NA values in the age column with the median
+#First, calculate the median (ignoring NAs):
+age.median <- median(data.test.new3$Age, na.rm = TRUE) #na.rm = TRUE means ignore NAs when calculating the value
+#Second, replace NAs with the calculated median (we saw how to select NAs above)
+data.test.new3$Age[is.na(data.test.new3$Age)] <- age.median  # Make sure you understand how this code works
+data.test.new3
+```
+ 
+```{r}
+#CHUNK 10
+#Replace missing value in the religion column with random values
+#First, count the missing values
+counts <- as.data.frame(table(data.test.new3$Religion))
+counts
+numMissing <- counts$Freq[counts$Var1 == ""]
+numMissing
+
+#Second, specify the distribution to generate samples from (note that we can use the frequency column as "weights," but need to get rid of the missing value as we don't want to generate new ones)
+counts.notMissing <- counts[counts$Var1 != "", ]
+counts.notMissing
+
+#Third, replace missing values using random samples from the distribution
+data.test.new3$Religion[data.test.new3$Religion == ""] <- sample(x = counts.notMissing$Var1, # The names of the religions
+  size = numMissing, # Number we need to generate to replace all missings
+  replace = TRUE, # Sample with replacement
+  prob = counts.notMissing$Freq) # The weights given by the frequency column in the counts table
+
+data.test.new3
+
+```
+
+CHUNK 11 provides space for you to replace missing income values by the mean of the non-missing values.
+
+```{r}
+#CHUNK 11
+income.mean <- mean(data.test.new3$Income[data.test.new3$Income != -1])
+income.mean
+data.test.new3$Income[data.test.new3$Income == -1] <- income.mean
+data.test.new3
+
+```
+
+Examine and run CHUNK 12 to see a solution.
+
+```{r}
+#CHUNK 12
+#Replace missing values in Income column with the mean
+#Firxt, calculate the mean
+m <- mean(data.test$Income[data.test.new3$Income != -1])
+#Second, replace missing with the mean
+data.test.new3$Income[data.test.new3$Income == -1] <- m
+data.test.new3
+```
+
+Use the space in CHUNK 13 to create data.test.new4 with missing values replaced by NA.
+
+```{r}
+#CHUNK 13
+data.test <- data.frame(Name = c("John", "Amy", "", "Jordan", "Kate"),
+                        Age = c(23, 22, 38, 31, NA),
+                        Religion = c("Christian", "", "Atheist", "Muslim", "Muslim"),
+                        Income = c(100000, -1, -1, -1, -110000))
+```
+
+CHUNK 14 provides a clunky sample solution using a double loop to work with each entry
+
+```{r}
+#CHUNK 14
+data.test <- data.frame(Name = c("John", "Amy", "", "Jordan", "Kate"),
+                        Age = c(23, 22, 38, 31, NA),
+                        Religion = c("Christian", "", "Atheist", "Muslim", "Muslim"),
+                        Income = c(100000, -1, -1, -1, -110000))
+
+#Note that if a cell is already NA it needs to skip evaluation for other missing value codes as R will not conduct a test on a missing value.
+data.test.new4 <- data.test
+for (i in 1:ncol(data.test))
+{
+  for (j in 1:nrow(data.test))
+  {
+    if(is.na(data.test[j,i])) {}
+       else
+       {
+           if(data.test[j,i]=="") {data.test.new4[j,i] <- NA}
+           if(data.test[j,i]==-1) {data.test.new4[j,i] <- NA}
+       }
+  }
+
+}
+data.test.new4
+
+```
+
+Run CHUNKS 15-17 to inpute values for income based on age. Don't worry about the regression formula.
+
+```{r}
+#CHUNK 15
+#Set up the data so missing values in age are filled in (for simplicity)
+data.test.new5 <- data.test
+data.test.new5$Age[is.na(data.test.new5$Age)] <- median(data.test.new5$Age, na.rm = TRUE)
+data.test.new5
+```
+
+```{r}
+#CHUNK 16
+#Fit a model for predicting income using Age 
+model <- lm("Income~Age", data = data.test.new5[data.test.new5$Income != -1,])
+summary(model)
+
+plot(data.test.new5$Age,data.test.new5$Income)
+abline(model)
+```
+
+```{r warning=FALSE}
+#CHUNK 17
+#Use our model to predict values for the missing values in the Income column
+data.test.new5$Income[data.test.new5$Income == -1] <- predict(model, newdata = data.test.new5[data.test.new5$Income == -1, ])
+data.test.new5
+```
+

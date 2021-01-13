@@ -1,0 +1,121 @@
+---
+title: "SOA Predictive Analytics Exam, Module 3 Sample Project"
+output: html_notebook
+---
+
+The following chunks provide an opportunity to explore the sample project data.
+
+Run CHUNK 1 to load the data.
+
+```{r}
+#CHUNK 1
+termLife <- read.csv(file = "TermLife.csv")
+head(termLife)
+```
+
+Run CHUNK 2 to view some summary statistics. What stands out?
+
+```{r}
+#CHUNK 2
+summary(termLife)
+```
+
+The following items are of interest:
+55% have purchased term insurance. So there will be a good opportunity for the data to separate those who purchase from those who don't.
+None of the variables have missing value codes. The only immediately suspicious value is an education level of 2.
+In some cases zeros are possible (no gifts to charity or an unmarried person having zero for spouse age).
+Later on we might want to check to be sure such fields are consistent.
+
+For now, we concentrate on making some graphs.
+
+First, decide which variables are best represented by bar charts. CHUNK 3 makes one for TERM_FLAG. Change the chunk to do the same for other variables. Is there anything interesting?
+
+```{r}
+#CHUNK 3
+
+library(ggplot2)
+plot.base <- ggplot(data = termLife) + geom_bar()
+plot.base + aes(x=TERM_FLAG)
+plot.base + aes(x=GENDER)
+plot.base + aes(x=AGE)
+plot.base + aes(x=MARSTAT)
+plot.base + aes(x=EDUCATION)
+plot.base + aes(x=SAGE)
+plot.base + aes(x=SEDUCATION)
+plot.base + aes(x=NUMHH)
+
+
+```
+
+The variables suitable for bar charts are:
+TERM_FLAG - as noted slightly more than half purchased term insurance
+GENDER - Fewer than 100 are female. Recall that this refers to who filled out the survey, not who is insured.
+MARSTAT - Few have status 2. It might make sense to combine with status 0.
+EDUCATION - An arbitrary decision is made here. Both AGE and EDUCATION are discrete, but there are a relatively small number of EDUCATION values, so no need to group them into a histogram.
+SEDUCATION - As noted, there should be zeroes for those with no spouse.
+NUMHH - Nothing to comment on
+
+CHUNK 4 makes histograms for the continuous variables, starting with FACE. Again, see if there is anything interesting.
+
+```{r}
+# CHUNK 4
+plot.base <- ggplot(data = termLife) + geom_histogram()
+plot.base + aes(x=FACE)
+plot.base + aes(x=AGE)
+plot.base + aes(x=SAGE)
+plot.base + aes(x=INCOME)
+plot.base + aes(x=INCOME) + scale_x_log10()
+plot.base + aes(x=CHARITY)
+
+plot.base <- ggplot(data = subset(termLife, FACE>0)) + geom_histogram()
+plot.base + aes(x=FACE)
+plot.base <- ggplot(data = subset(termLife, SAGE>0)) + geom_histogram()
+plot.base + aes(x=SAGE)
+plot.base <- ggplot(data = subset(termLife, CHARITY>0)) + geom_histogram()
+plot.base + aes(x=CHARITY)
+
+```
+
+FACE - With 45% being zero, it might be better to plot only those values where FACE is positive. CHUNK 5 provides this vies.
+AGE - Appears to be nicely distributed across reasonable values
+SAGE - Ignoring the zeroes, this also seems reasonable
+INCOME - Highly skewed, so consider a log scale (code not provided)
+CHARITY - There are a lot of zeroes. CHUNK 6 removes them before plotting
+
+```{r}
+# CHUNK 5
+
+termLife.pos <- termLife[termLife$FACE>0, ]
+plot.base <- ggplot(data = termLife.pos) + geom_histogram()
+plot.base + aes(x=FACE)
+plot.base + aes(x=FACE) + scale_x_log10()
+```
+
+FACE - It is skewed to the right. Consider a log scale for a more useful view (code not provided)
+
+```{r}
+#CHUNK 6
+
+termLife.char <- termLife[termLife$CHARITY>0, ]
+plot.base <- ggplot(data = termLife.char) + geom_histogram()
+plot.base + aes(x=CHARITY)
+plot.base + aes(x=CHARITY) + scale_x_log10()
+```
+
+CHARITY - It is skewed to the right . Consider a log scale for a more useful view (code not provided)
+
+The last graphs we will make are scatterplots. CHUNK 7 makes one for FACE versus INCOME. Make any others that might be interesting and comment.
+
+```{r}
+# CHUNK 7
+plot.base.pos <- ggplot(data=termLife.pos,
+            mapping = aes(x = INCOME,
+                          y = FACE))
+plot.base.pos + geom_point() +
+  geom_smooth(method = "loess") +
+  scale_x_log10() + scale_y_log10()
+
+```
+
+The plot is interesting in that there appears to be a strong positive linear relationship in the middle incomes (where most of the data are) but it flattens out at each end. A plot of FACE against EDUCATION shows little, if any, relationship.
+

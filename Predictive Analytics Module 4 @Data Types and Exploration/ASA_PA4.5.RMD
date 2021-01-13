@@ -1,0 +1,307 @@
+---
+title: "Predictive Analytics Exam Module 4 Section 5"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+---
+
+Run CHUNK 1 to load and display Anscombe's Quartet.
+
+```{r echo = FALSE}
+#CHUNK 1
+data.AQ <- read.csv("AnscombesQuartet.csv")
+data.AQ
+```
+
+Run CHUNK 2 to determine the sample means and variances of each variable.
+
+```{r echo = FALSE}
+#CHUNK 2
+#The sapply function is discussed in Section 11.1 of R for Everyone. You are not expected to know this shortcut. The individual variables could also be accessed via a loop as done in the second part of this chunk.
+data.frame(mean = sapply(data.AQ, mean),
+           var = sapply(data.AQ, var))
+
+print("Mean   Variance")
+for (i in 1:ncol(data.AQ))
+{
+  m <- mean(data.AQ[, i])
+  v <- var(data.AQ[, i])
+  print(paste(colnames(data.AQ)[i], m, v, sep = "  "))
+}
+```
+
+Run CHUNK 3 to plot the variables
+
+```{r echo = FALSE}
+#CHUNK 3
+library(ggplot2)
+library(gridExtra)
+p1 <- ggplot(data = data.AQ, aes(x = X1x, y = X1y)) +
+       geom_point(color = 1) + ylim(2,14)
+p2 <- ggplot(data = data.AQ, aes(x = X2x, y = X2y)) +
+       geom_point(color = 2) + ylim(2,14)
+p3 <- ggplot(data = data.AQ, aes(x = X3x, y = X3y)) +
+       geom_point(color = 3) + ylim(2,14)
+p4 <- ggplot(data = data.AQ, aes(x = X4x, y = X4y)) +
+       geom_point(color = 4)+ ylim(2,14)
+grid.arrange(p1,p2,p3,p4,ncol=2) 
+```
+
+Run CHUNK 4 to load the mortality data.
+
+```{r echo = FALSE}
+#CHUNK 4
+data.mortality <- read.csv("soa_mortality_data.csv")
+```
+
+Run CHUNK 5 to see the output from the summary function.
+
+```{r}
+#CHUNK 5
+head(data.mortality)
+summary(data.mortality$issage)
+
+levels(data.mortality$prodcat)
+
+data.mortality.wholeLife <- data.mortality[data.mortality$prodcat == "WL",]
+data.mortality.term <- data.mortality[data.mortality$prodcat == "TRM",]
+head(data.mortality.wholeLife)
+head(data.mortality.term)
+
+summary(data.mortality.wholeLife$issage)
+summary(data.mortality.term$issage)
+```
+
+Run CHUNK 6 to calculate a variety of statistics.
+
+```{r}
+#CHUNK 6
+stats.central <- data.frame(mean = mean(data.mortality$issage), 
+                            median = median(data.mortality$issage),
+                            percentile5 = quantile(data.mortality$issage, 0.05),
+                            percentile25 = quantile(data.mortality$issage, 0.25),
+                            percentile50 = quantile(data.mortality$issage, 0.50),
+                            percentile75 = quantile(data.mortality$issage, 0.75),
+                            percentile95 = quantile(data.mortality$issage, 0.95),
+                            max = max(data.mortality$issage),
+                            min = min(data.mortality$issage), 
+                            row.names = c("issage"))
+stats.central
+```
+
+Run CHUNK 7 to calculate some measures of spread.
+
+```{r}
+#CHUNK 7
+
+stats.spread <- data.frame(variance = var(data.mortality$issage),
+                           standardDev = sd(data.mortality$issage),
+                           iqr = IQR(data.mortality$issage),
+                           row.names = c("issage"))
+stats.spread
+
+stats.spread.wholeLife <- data.frame(variance = var(data.mortality.wholeLife$issage),
+                           standardDev = sd(data.mortality.wholeLife$issage),
+                           iqr = IQR(data.mortality.wholeLife$issage),
+                           row.names = c("issage"))
+stats.spread.wholeLife
+
+stats.spread.term <- data.frame(variance = var(data.mortality.term$issage),
+                           standardDev = sd(data.mortality.term$issage),
+                           iqr = IQR(data.mortality.term$issage),
+                           row.names = c("issage"))
+stats.spread.term
+
+###################################
+stats.spread.function <- function(col.name) {
+  row.names = c(col.name)
+  
+  df <- data.frame(variance = var(data.mortality[, row.names]),
+                   standardDev = sd(data.mortality[, row.names]),
+                   iqr = IQR(data.mortality[, row.names]),
+                   row.names = row.names)
+  return(df)
+}
+
+stats.spread.function("issage")
+stats.spread.function("duration")
+stats.spread.function("exposure_cnt")
+stats.spread.function("exposure_face")
+
+
+```
+
+Run CHUNK 8 to make a histogram of issue age.
+
+```{r}
+#CHUNK 8
+p2 <- ggplot(data = data.mortality, aes(issage, ..density..)) +
+       geom_histogram(binwidth = 5, fill = "blue", alpha = 0.5)
+p2
+
+```
+
+Run CHUNK 9 to see different bin widths.
+
+```{r}
+#CHUNK 9
+p1 <- ggplot(data = data.mortality, aes(issage, ..density..)) +
+       geom_histogram(binwidth = 1, fill = "blue", alpha = 0.5)
+p2 <- ggplot(data = data.mortality, aes(issage, ..density..)) +
+       geom_histogram(binwidth = 20, fill = "blue", alpha = 0.5)
+grid.arrange(p1,p2,ncol=2)
+
+```
+
+Run CHUNK 10 to make histograms of duration and attained age.
+
+```{r}
+#CHUNK 10
+p1 <- ggplot(data = data.mortality, aes(duration, ..density..)) +
+       geom_histogram(binwidth = 10, fill = "blue", alpha = 0.5)
+p2 <- ggplot(data = data.mortality, aes(attage, ..density..)) +
+       geom_histogram(binwidth = 10, fill = "blue", alpha = 0.5)
+grid.arrange(p1,p2,ncol=2)
+p1 <- ggplot(data = data.mortality, aes(duration, ..density..)) +
+       geom_histogram(binwidth = 1, fill = "blue", alpha = 0.5)
+p2 <- ggplot(data = data.mortality, aes(attage, ..density..)) +
+       geom_histogram(binwidth = 1, fill = "blue", alpha = 0.5)
+grid.arrange(p1,p2,ncol=2)
+
+```
+
+Run CHUNK 11 to split the variables by product category.
+
+```{r}
+#CHUNK 11
+p1 <- ggplot(data = data.mortality, aes(x = prodcat, y = attage)) +
+        geom_boxplot(fill = c(1:4), alpha = 0.5) 
+p2 <- ggplot(data = data.mortality, aes(x = prodcat, y = issage)) +
+        geom_boxplot(fill = c(1:4), alpha = 0.5) 
+p3 <- ggplot(data = data.mortality, aes(x = prodcat, y = duration)) +
+        geom_boxplot(fill = c(1:4), alpha = 0.5) 
+p4 <- ggplot(data = data.mortality, aes(x = "attage", y = attage)) +
+        geom_boxplot(alpha = 0.5) 
+p5 <- ggplot(data = data.mortality, aes(x = "issage", y = issage)) +
+        geom_boxplot(alpha = 0.5) 
+p6 <- ggplot(data = data.mortality, aes(x = "duration", y = duration)) +
+        geom_boxplot(alpha = 0.5) 
+
+grid.arrange(p1,p4,p2,p5,p3,p6,ncol=2)
+
+```
+
+Run CHUNK 12 to make a frequency table.
+
+```{r}
+#CHUNK 12
+
+#The table function is extrememly useful. Use ?table to learn more about it.
+
+table(data.mortality$prodcat)
+
+table(data.mortality$prodcat) / nrow(data.mortality)
+```
+
+Run CHUNK 13 to use exposures.
+
+```{r}
+#CHUNK 13
+
+#We do this two ways. One uses the aggregate function (see Chapter 11 of R for Everyone), which is not required reading. It is followed by code that uses more basic commands. Also, keep in mind that at your exam it is acceptable to use Excel to preform this type of calculation.
+
+# Exposure-weighted counts
+tbl <- aggregate(data.mortality[,c("exposure_cnt","exposure_face")], by = list(ProductCategory = data.mortality$prodcat), FUN = sum) 
+head(tbl)
+
+# Exposure-weighted Percentages
+tbl$exposure_cnt_p <- tbl$exposure_cnt / sum(tbl$exposure_cnt)
+tbl$exposure_face_p <- tbl$exposure_face / sum(tbl$exposure_face)
+head(tbl)
+
+# Counts for comparison
+tbl$count <- as.numeric(table(data.mortality$prodcat))
+tbl$count_p <- tbl$count / sum(tbl$count)
+
+tbl
+
+#First create four data frames that contain the subsets
+data.mortality.TRM <- data.mortality[data.mortality$prodcat == "TRM", ]
+data.mortality.UL <- data.mortality[data.mortality$prodcat == "UL", ]
+data.mortality.ULSG <- data.mortality[data.mortality$prodcat == "ULSG", ]
+data.mortality.WL <- data.mortality[data.mortality$prodcat == "WL", ]
+
+#Obtain the totals
+TRM.cnt <- sum(data.mortality.TRM$exposure_cnt)
+UL.cnt <- sum(data.mortality.UL$exposure_cnt)
+ULSG.cnt <- sum(data.mortality.ULSG$exposure_cnt)
+WL.cnt <- sum(data.mortality.WL$exposure_cnt)
+all.cnt <- sum(data.mortality$exposure_cnt)
+cnt <- c(TRM.cnt,UL.cnt,ULSG.cnt,WL.cnt)
+
+TRM.face <- sum(data.mortality.TRM$exposure_face)
+UL.face <- sum(data.mortality.UL$exposure_face)
+ULSG.face <- sum(data.mortality.ULSG$exposure_face)
+WL.face <- sum(data.mortality.WL$exposure_face)
+all.face <- sum(data.mortality$exposure_face)
+face <- c(TRM.face,UL.face,ULSG.face,WL.face)
+
+#obtain the percentages
+TRM.cnt_p <- TRM.cnt/all.cnt
+UL.cnt_p <- UL.cnt/all.cnt
+ULSG.cnt_p <- ULSG.cnt/all.cnt
+WL.cnt_p <- WL.cnt/all.cnt
+cnt_p <- c(TRM.cnt_p,UL.cnt_p,ULSG.cnt_p,WL.cnt_p)
+
+TRM.face_p <- TRM.face/all.face
+UL.face_p <- UL.face/all.face
+ULSG.face_p <- ULSG.face/all.face
+WL.face_p <- WL.face/all.face
+face_p <- c(TRM.face_p,UL.face_p,ULSG.face_p,WL.face_p)
+
+#obtain the raw counts
+TRM.count <- nrow(data.mortality.TRM)
+UL.count <- nrow(data.mortality.UL)
+ULSG.count <- nrow(data.mortality.ULSG)
+WL.count <- nrow(data.mortality.WL)
+all.count <- nrow(data.mortality)
+count <- c(TRM.count,UL.count,ULSG.count,WL.count)
+
+#obtain the percentages
+TRM.count_p <- TRM.count/all.count
+UL.count_p <- UL.count/all.count
+ULSG.count_p <- ULSG.count/all.count
+WL.count_p <- WL.count/all.count
+count_p <- c(TRM.count_p,UL.count_p,ULSG.count_p,WL.count_p)
+
+#make the table
+tbl2 <- data.frame("ProductCategory" = c("TRM","UL","ULSG","WL"),"exposure_cnt" = cnt, "exposure_face" = face, "exposure_cnt_p" = cnt_p, "exposure_face_p" = face_p, "count" = count, "count_p" = count_p)
+tbl2
+
+
+
+
+
+```
+
+Run CHUNK 14 to turn the frequency table into a bar chart.
+
+```{r}
+#CHUNK 14
+# Count summary
+p1 <- ggplot(data = data.mortality, aes(x = prodcat)) +
+  geom_bar(stat = "count", fill = c(1:4), alpha = 0.5)
+
+# Summary by exposure count variable
+p2 <- ggplot(data = data.mortality, aes(x = prodcat, y = exposure_cnt)) +
+  geom_bar(stat = "summary", fun.y = sum, fill = c(1:4), alpha = 0.5)
+
+# Summary by face amount exposure variable
+p3 <- ggplot(data = data.mortality, aes(x = prodcat, y = exposure_face)) +
+  geom_bar(stat = "summary", fun.y = sum, fill = c(1:4), alpha = 0.5)
+
+grid.arrange(p1,p2,p3,ncol=3)
+
+```
+

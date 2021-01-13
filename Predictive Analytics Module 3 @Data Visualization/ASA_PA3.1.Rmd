@@ -1,0 +1,111 @@
+---
+title: "SOA Predictive Analytics Exam, Module 3, Part 1"
+output:
+  html_notebook: default
+  
+---
+
+Load the ggplot2 library and the gampminder data (which you should already have in your working directory). Use the head command to see the first few results. 
+
+Also note that we are loading the gapminder data from a *.csv file rather than from the gapminder package. We are doing it that way here because we are refraining from using packages in these Rmd files that will not be availfable on your assessment.
+
+```{r}
+library(ggplot2)
+gapminder <- read.csv(file="gapMinderDataFiveYear.csv")
+head(gapminder, n=10)
+
+```
+
+Make the scatterplot in Figure 2.6. For this one the code has been copied for you.
+
+```{r}
+p <- ggplot(data=gapminder, mapping = aes(x=gdpPercap, y=lifeExp))
+p + geom_point()
+```
+
+Insurance Industry Practice
+
+The file mortality_data.csv contains some summary information of a life insurance company mortality study that shows actual and expected mortality rates for different pricing cells, along with the exposure upon which the actual deaths were observed.
+
+mortality_data.csv has the following fields:
+
+attage: Attained age of the policyholder
+sex:    Sex of policy holder (M = male, F = female, U = unknown)
+smoker: Smoker status (N = Nonsmoker, S = Smoker, U = Unknown)
+exposure: Total exposure for the group in years
+actual_dths: Actual number of deaths observed for the lives in the exposure period
+expected_dths: Expected number of deaths for this group of exposures, according to an industry mortality table
+actual_mort: The observed mortality rate (actual_dths/exposure)
+expected_mort: The expected mortality rate (expected_dths/exposure)
+
+
+In the space below, do the following 6 tasks. Sample solutions are given afterwards. 
+
+
+1- Load the data into a dataframe called "mort_data"
+```{r Solve1}
+
+mort_data = read.csv("mortality_data.csv")
+
+```
+
+2- Look inside mort_data by viewing its structure
+```{r Solve2}
+
+head(mort_data, n=10)
+
+```
+3- Verify that mort_data belongs to the dataframe class
+```{r Solve3}
+
+class(mort_data)
+
+```
+
+4- Look at summary statistics of the fields in mort_data
+```{r Solve4}
+
+summary(mort_data)
+
+```
+
+5- Calculate the mean and standard deviation of the variable attained age (attage)
+```{r Solve5}
+
+mean(mort_data$attage)
+var(mort_data$attage)^0.5
+
+```
+6- create a scatter plot of the mortality data (one point for every row in the data) that shows the attained age along the x axis and the actual mortality rate along the y axis
+```{r Solve6}
+
+p2 = ggplot(data = mort_data, mapping = aes(x=mort_data$attage, y=mort_data$actual_mort))
+p2 + geom_point()
+
+```
+
+
+
+```{r Solution}
+
+#1
+mort_data <- read.csv("mortality_data.csv")
+
+#2
+str(mort_data)
+
+#3
+class(mort_data)
+
+#4
+summary(mort_data)
+
+#5
+mean(mort_data$attage)
+sd(mort_data$attage)
+
+#6
+p <- ggplot(data = mort_data, mapping = aes(x = attage, y = actual_mort) )
+p + geom_point()
+```
+

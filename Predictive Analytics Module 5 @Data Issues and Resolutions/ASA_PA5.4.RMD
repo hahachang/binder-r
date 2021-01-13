@@ -1,0 +1,25 @@
+---
+title: 'Predictive Analytics Exam Module 5 Section 4'
+output:
+    html_notebook: default
+---
+
+Run CHUNK 1 to load the term life dataset and create a set of scatterplots.
+
+```{r echo = FALSE}
+#CHUNK 1
+term.life <- read.csv("TermLife.csv")
+head(term.life)
+pairs(term.life[,c(4,1,6,10)])
+```
+
+Run CHUNK 2 to work with log transforms.
+
+```{r}
+#CHUNK 2
+
+term.life$log_face <- log(term.life$FACE)
+term.life$log_income <- log(term.life$INCOME)
+pairs(term.life[,c(4,12,6,13)])
+```
+

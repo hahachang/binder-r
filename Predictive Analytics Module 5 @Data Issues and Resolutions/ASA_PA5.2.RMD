@@ -1,0 +1,66 @@
+---
+title: "SOA Predictive Analytics Exam, Module 5, Section 2"
+output:
+  html_notebook: default
+  
+---
+
+Use CHUNK 1 to load the ggplot2 and gridExtra libraries and the term life dataset.
+
+```{r}
+#CHUNK 1
+library(ggplot2)
+library(gridExtra)
+term.life <- read.csv(file="TermLife.csv")
+
+```
+
+Run CHUNK 2 to explore the distribution of FACE and the derived variable FACE/INCOME. The first attempt indicates a log scale on the x-axis may help. So that is done here.
+
+```{r}
+#CHUNK 2
+#First we need to isolate those records where FACE is positive
+term.life.pos <- term.life[term.life$FACE>0,]
+#Then add the derived variable
+term.life.pos$Ratio <- term.life.pos$FACE/term.life.pos$INCOME
+p1 <- ggplot(data=term.life.pos) + geom_histogram(aes(x=FACE,y=..density..)) + scale_x_log10()
+p2 <- ggplot(data=term.life.pos) + geom_histogram(aes(x=Ratio,y=..density..))+ scale_x_log10()
+grid.arrange(p1,p2,ncol=2)
+```
+
+It is perhaps not surprising that the face amounts are more concentrated as individuals are likely to select round numbers for their insurance purchase while income could be most any number. 
+
+Run CHUNK 3 to explore the age difference variable.
+
+```{r}
+#CHUNK 3
+#We can use the full dataset here
+term.life$age.diff <- term.life$AGE-term.life$SAGE
+p1 <- ggplot(data=term.life) + geom_histogram(aes(x=age.diff,y=..density..))
+p1
+#This plot looks odd. Some of the age differences are really large. Turns out the spouse age is often 0 (likely where there is no spouse). Also, there are negative values. The survey respondent could be any household member, so maybe the absolute difference is more interesting.
+
+term.life.nonzeroSAGE <- term.life[term.life$SAGE!=0,]
+term.life.nonzeroSAGE$abs.diff <- abs(term.life.nonzeroSAGE$AGE - term.life.nonzeroSAGE$SAGE)
+p2 <- ggplot(data=term.life.nonzeroSAGE) + geom_histogram(aes(x=abs.diff,y=..density..))
+p2
+```
+
+Before looking the two education variables, we do some checking for zeros and relationships. CHUNK 4 looks at the two variables and also makes a scatterplot.
+
+```{r}
+#CHUNK 4
+table(term.life$EDUCATION)
+table(term.life$SEDUCATION)
+ggplot(data=term.life, aes(x=EDUCATION,y=SEDUCATION)) + geom_point()
+```
+
+While we can't be sure about those with a low number of years of education, the 141 with SEDUCATION = 0 should be eliminated. Also, note that this is a discrete variable, as is the difference. So a histogram is not appropriate (while ages all happen to be whole numbers, it makes sense to treat age as continuous). CHUNK 5 makes a bar chart.
+
+```{r}
+#CHUNK 5
+term.life.poseduc <- term.life[term.life$SEDUCATION != 0,]
+term.life.poseduc$educ.diff <- abs(term.life.poseduc$EDUCATION - term.life.poseduc$SEDUCATION)
+ggplot(data=term.life.poseduc, aes(x=educ.diff)) + geom_bar()
+```
+

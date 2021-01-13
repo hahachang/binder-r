@@ -1,0 +1,232 @@
+---
+title: "SOA Predictive Analytics Exam, Module 5 Sample Project"
+output: html_notebook
+---
+
+Run CHUNK 1 to load the data.
+
+```{r}
+#CHUNK 1
+termLife <- read.csv(file = "TermLife.csv")
+```
+
+Run CHUNK 2 to summarize the variables
+
+```{r}
+#CHUNK 2
+summary(termLife)
+
+```
+
+In all cases the minimum and maximum indicate no clear violations though some might be questionable (education of 2, income of 260). SAGE and SEDUCATION of 0 are acceptable provided they are due to there being no spouse in the household. Some variables, such as MARSTAT must be integers. The next chunk checks on the variable types.
+
+```{r}
+#CHUNK 3
+sapply(termLife, class)
+```
+
+It turns out all are integers. We will treat INCOME and CHARITY as continuous variables. R will treat them as such when appropriate.
+
+We now want to check for bivariate inconsistencies. The first is to ensure that TERM_FLAG = 0 is associated only with FACE = 0 and TERM_FLAG = 1 is associated only with FACE > 0. This is done in CHUNK 4.
+
+```{r}
+#CHUNK 4
+
+max(termLife[termLife$TERM_FLAG==0,]$FACE) #We hope to see a value of 0 here
+min(termLife[termLife$TERM_FLAG==1,]$FACE) #We hope to see a positive value here
+
+```
+
+The results confirm there are no inconsistencies. We next look at the three marital status categories. From the data dictionary, those with MARSTAT = 1 or 2 have a spouse or partner, those with 0 do not. For this step we split the data into two groups and then summarize the variables. This is done in CHUNK 5
+
+```{r}
+#CHUNK 5
+
+#First create two data frames
+termLife.single <- termLife[termLife$MARSTAT==0,]
+termLife.couple <- termLife[termLife$MARSTAT!=0,]
+summary(termLife.single)
+summary(termLife.couple)
+```
+
+The summary indicates no issues for those who are single. The two spouse variables are zero in all cases. For those with status 1 or 2, we see that all have a spouse age. But some have spouse education of zero and some have a household count of 1. The first seems unlikely. The second could be possible in a situation where the spouse lives elsewhere. The next chunk makes two tables to look at this issue in a different way.
+
+Note that the first argument in the table function is placed in the vertical direction, while the second argument is placed in the horizontal direction.
+
+```{r}
+#CHUNK 6
+print("MARSTAT vs SEDUCATION")
+table(termLife$MARSTAT, termLife$SEDUCATION)
+print("MARSTAT vs NUMHH")
+table(termLife$MARSTAT, termLife$NUMHH)
+```
+
+We see there are five cases where there is a spouse/partner and no education. We also see some other unusually low values. These will need to be discussed when outliers are looked at. For the number in the household, given there are only four cases and as noted this is conceivable, we will not make any changes at this time.
+
+We now revisit some of the discrete variables to look for outliers. This is done using frequency tables in CHUNK 7.
+
+```{r}
+#CHUNK 7
+print("EDUCATION")
+table(termLife$EDUCATION)
+print("SEDUCATION")
+table(termLife$SEDUCATION)
+print("NUMHH")
+table(termLife$NUMHH)
+```
+
+As noted, there are a handful with low education levels. We make an arbitrary decision to remove records where the value is 6 or less (but not zero). We are saving some time here that may not be a good idea in general. Suppose in the end SEDUCATION is not used as a predictor. Then there is no reason to drop those records. Another option would be to put the education levels in bands, say 0 (which is really a missing value), 1-9, 10-12, 13-16, and 17. This is a reminder that there is often no uniquely best method to apply in situations like this. 
+
+The number in household variable looks reasonable.
+
+CHUNK 8 removes the records. We rename the dataframe to not lose the original. Three different ways to do this are presented. The "all" function is used to verify that all three methods give the same result.
+
+```{r}
+#CHUNK 8
+termLife.new <- termLife[termLife$EDUCATION >6,]
+termLife.new <- termLife.new[termLife.new$SEDUCATION>6 | termLife.new$SEDUCATION==0,]
+
+# could also do it in one step
+termLife.new1 <- termLife[termLife$EDUCATION >6 & 
+                            (termLife$SEDUCATION>6 | termLife$SEDUCATION==0), ]
+
+all(termLife.new1 == termLife.new)
+
+# or with dplyr
+library(dplyr)
+termLife.new2 <- termLife %>% filter(EDUCATION > 6,
+                                     SEDUCATION>6 | SEDUCATION==0)
+
+all(termLife.new2==termLife.new1)
+```
+
+CHUNK 9 makes boxplots for the continuous variables.
+
+```{r}
+#CHUNK 9
+library(ggplot2)
+library(gridExtra)
+plot.base <- ggplot(data = termLife.new) + geom_boxplot() + aes(x="")
+p1 <- plot.base + aes(y=INCOME)
+p2 <- plot.base + aes(y=CHARITY)
+p3 <- plot.base + aes(y=FACE)
+grid.arrange(p1,p2,p3,ncol=3)
+```
+
+We recongize that for FACE and CHARITY the presence of zero values may be affecting the results. CHUNK 10 eliminates the zero values from the plots.
+
+```{r}
+#CHUNK 10
+p1 <- ggplot(data = termLife.new) + geom_boxplot() + aes(x="",y=INCOME)
+p2 <- ggplot(data = termLife.new[termLife.new$CHARITY>0,]) + geom_boxplot() + aes(x="",y=CHARITY)
+p3 <- ggplot(data = termLife.new[termLife.new$FACE>0,]) + geom_boxplot() + aes(x="",y=FACE)
+grid.arrange(p1,p2,p3,ncol=3)
+
+```
+
+Try a log transformation
+
+```{r}
+#CHUNK 11
+
+p1 <- ggplot(data = termLife.new) + geom_boxplot() + aes(x="",y=INCOME)+ scale_y_log10()
+p2 <- ggplot(data = termLife.new[termLife.new$CHARITY>0,]) + geom_boxplot() + aes(x="",y=CHARITY)+ scale_y_log10()
+p3 <- ggplot(data = termLife.new[termLife.new$FACE>0,]) + geom_boxplot() + aes(x="",y=FACE)+ scale_y_log10()
+grid.arrange(p1,p2,p3,ncol=3)
+```
+
+This looks much better. But there are some large CHARITY values. CHUNK 12 presents the 10 largest values.
+
+```{r}
+#CHUNK 12
+sort(termLife.new$CHARITY, decreasing = TRUE)[1:10]
+ggplot(data = termLife, mapping = aes(x=INCOME, y=CHARITY)) + 
+  geom_point() + 
+  scale_y_log10() +
+  scale_x_log10()
+
+```
+
+CHUNK 13 deletes the record where CHARITY exceeds 1,000,000. It also does log tranforms of FACE, INCOME, and CHARITY. For FACE and CHARITY, values of 0 are kept at 0 so the transformation does not create errors. An alternative approach using dplyr is presented.
+
+```{r}
+#CHUNK 13
+termLife.new <- termLife.new[termLife.new$CHARITY < 1000000,]
+termLife.new$logFACE <- ifelse(termLife.new$FACE==0, 0, log(termLife.new$FACE))
+termLife.new$logINCOME <- log(termLife.new$INCOME)
+termLife.new$logCHARITY <- ifelse(termLife.new$CHARITY==0, 0, log(termLife.new$CHARITY))
+
+#with dplyr
+termLife.new1 <- termLife.new %>% 
+  filter(CHARITY < 1000000) %>%
+  mutate(logFACE = ifelse(FACE==0, 0, log(FACE)),
+         logINCOME = log(INCOME),
+         logCHARITY = ifelse(CHARITY==0, 0, log(CHARITY)))
+
+all(termLife.new1==termLife.new)
+
+```
+
+Run CHUNK 14 to re-examine the MARSTAT variable.
+
+```{r}
+#CHUNK 14
+table(termLife.new$MARSTAT)
+```
+
+Use CHUMK 15 to change values of 2 to 1.
+
+```{r}
+#CHUNK 15
+termLife.new$MARSTAT <- ifelse(termLife.new$MARSTAT == 0, 0, 1)
+table(termLife.new$MARSTAT)
+```
+
+CHUNK 16 makes histograms of the three continuous variables to see if any additional work is needed.
+
+
+```{r}
+#CHUNK 16
+
+p1 <- ggplot(data = termLife.new) + geom_histogram() + aes(logINCOME, ..density..)
+p2 <- ggplot(data = termLife.new[termLife.new$logCHARITY>0,]) + geom_histogram() + aes(logCHARITY, ..density..)
+p3 <- ggplot(data = termLife.new[termLife.new$logFACE>0,]) + geom_histogram() + aes(logFACE, ..density..)
+grid.arrange(p1,p2,p3,ncol=3)
+```
+
+There appears to be a few problem points at the left ends of the FACE and INCOME variables. CHUNK 17 obtains the smallest values for each. 
+
+```{r}
+#CHUNK 17
+
+termLife.new[order(termLife.new$logINCOME),][1:10,]
+x <- termLife.new[termLife.new$logFACE>0,]
+x[order(x$logFACE),][1:10,]
+
+```
+
+Run CHUNK 18 to create two new variables. An alternative approach using dplyr is presented.
+
+```{r}
+#CHUNK 18
+
+termLife.new$FACEratio <- termLife.new$FACE/termLife.new$INCOME
+termLife.new$AGEdiff <- ifelse(termLife.new$SAGE == 0, 0, abs(termLife.new$AGE - termLife.new$SAGE))
+
+# with dplyr
+termLife.new1 <- termLife.new %>%
+  mutate(FACEratio = FACE / INCOME,
+         AGEdiff = ifelse(SAGE==0, 0, abs(AGE - SAGE)))
+
+all(termLife.new1==termLife.new)
+```
+
+CHUNK 19 creates and saves two datasets for later use.
+
+```{r}
+#CHUNK 19
+write.csv(termLife.new, file = "termLifeFLAG.csv")
+termLifeFACE <- termLife.new[termLife.new$FACE>0,]
+write.csv(termLifeFACE, file = "termLifeFACE.csv")
+```
+
