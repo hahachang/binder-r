@@ -1,0 +1,234 @@
+---
+title: "SOA Predictive Analytics Exam, Module 7 Sample Project"
+output: html_notebook
+---
+
+Run CHUNK 1 to load and summarize the data. Note there is a command to clear the environment. Comment it out if you don't want this to happen.
+
+```{r}
+#CHUNK 1
+
+rm(list=ls())
+tlFLAG <- read.csv(file = "termLifeFLAG.csv")
+summary(tlFLAG)
+```
+
+Run CHUNK 2 to remove variables that will not be used.
+
+X, FACE, INCOME, CHARITY, logFACE, FACEratio
+
+```{r}
+#CHUNK 2
+
+tlFLAG <- tlFLAG[,-c(1,2,11,12,13,16)]
+summary(tlFLAG)
+
+```
+
+Run CHUNK 3 to set up training and validation sets.
+
+```{r}
+#CHUNK 3
+
+library(caret)
+set.seed(1000)
+training.indices <- createDataPartition(tlFLAG$TERM_FLAG, p = 0.8, list = FALSE)
+tlFLAG.t <- tlFLAG[training.indices, ] 
+tlFLAG.v <- tlFLAG[-training.indices, ]
+rm(training.indices)
+
+```
+
+Run CHUNK 4 to create an initial tree.
+
+minsplit
+the minimum number of observations that must exist in a node in order for a split to be attempted.
+
+minbucket
+the minimum number of observations in any terminal <leaf> node. If only one of minbucket or minsplit is specified, the code either sets minsplit to minbucket*3 or minbucket to minsplit/3, as appropriate.
+
+```{r}
+#CHUNK 4
+library(rpart.plot)
+library(rpart)
+set.seed(1234)
+
+#Set the parameters to get a fairly complex tree. A node can have has few as 2 observations, the default complexity parameter is used, and the tree can be 7 levels deep.
+tree1 <- rpart(TERM_FLAG~., 
+               data = tlFLAG.t, 
+               method = "class",
+               control = rpart.control(minbucket = 5, cp = 0.01, maxdepth = 7),
+               parms = list(split = "gini"))
+
+tree1
+rpart.plot(tree1)
+```
+
+Run CHUNK 5 to obtain the confusion matrix.
+
+```{r}
+#CHUNK 5
+
+pred <- predict(tree1, type = "class")
+
+confusionMatrix(pred, factor(tlFLAG.t$TERM_FLAG)) 
+```
+
+Run CHUNK 6 to obtain the confusion matrix against the validation set.
+
+```{r}
+#CHUNK 6
+pred.v <- predict(tree1, type = "class", newdata = tlFLAG.v)
+
+confusionMatrix(pred.v, factor(tlFLAG.v$TERM_FLAG)) 
+```
+
+Run CHUNK 7 to prune the tree using the optimal complexity parameter. The CHUNK also computes the confusion matrices.
+
+ 
+```{r}
+#CHUNK 7
+library(rpart.plot)
+tree2 <- prune(tree1, cp = tree1$cptable[which.min(tree1$cptable[, "xerror"]), "CP"])
+
+rpart.plot(tree2)
+
+pred2 <- predict(tree2, type = "class")
+
+confusionMatrix(pred2, factor(tlFLAG.t$TERM_FLAG))
+
+pred.v2 <- predict(tree2, type = "class", newdata = tlFLAG.v)
+
+confusionMatrix(pred.v2, factor(tlFLAG.v$TERM_FLAG)) 
+```  
+
+Run CHUNK 8 to select the complexity parameter using cross validation.
+
+the optimal tree uses the same four variables as the pruned tree obtained previously. For the training set the performance is 75% and 67% and for the validation set it is 60% and 66%. A closer look indicates that this is exactly the same tree produced earlier. Note that this is not always the case. Also, different seeds can produce different results in either case.
+
+```{r}
+#CHUNK 8
+set.seed(6)
+
+Grid <- expand.grid(cp=seq(0, 0.2, 0.001))
+fitControl <- trainControl(method = "cv", number = 6)
+
+tree3 <- train(factor(TERM_FLAG)~.,
+               data = tlFLAG.t,
+               method = 'rpart',
+               trControl = fitControl,
+               metric = "Accuracy",
+               tuneGrid = Grid,
+               na.action = na.omit,
+               parms=list(split='Gini'))
+
+tree3$finalModel 
+
+plot(tree3)
+rpart.plot(tree3$finalModel, extra=4)
+
+pred3 <- predict(tree3, type = "raw")
+
+confusionMatrix(pred3, factor(tlFLAG.t$TERM_FLAG))
+
+pred.v3 <- predict(tree3, type = "raw", newdata = tlFLAG.v)
+
+confusionMatrix(pred.v3, factor(tlFLAG.v$TERM_FLAG)) 
+```
+
+CHUNK 9 fits a random forest model using some arbitrary parameters.
+
+
+```{r}
+#CHUNK 9
+# Train the model
+library(randomForest)
+set.seed(1000)
+rf1 <- randomForest(formula = factor(TERM_FLAG)~., 
+                    data = tlFLAG.t,
+                    ntree = 500,
+                    mtry = 4, # The number of features to use in each tree
+                    sampsize = floor(0.6 * nrow(tlFLAG.t)), # The number of observations to use in each tree
+                    nodesize = 5, # The minimum number of observations in each leaf node of a tree - this controls complexity
+                    importance = TRUE
+                    )
+
+pred <- predict(rf1, tlFLAG.t)
+
+confusionMatrix(pred, factor(tlFLAG.t$TERM_FLAG))
+
+pred.v <- predict(rf1, newdata = tlFLAG.v)
+
+confusionMatrix(pred.v, factor(tlFLAG.v$TERM_FLAG)) 
+```
+
+CHUNK 10 uses caret to tune the mtry parameter and learn about variable importance.
+
+the optimal value of mtry turned out to be 2, which differed from the ealy choice(4). The training set accuracy was outstanding at 95% and 95%. For the validation set it is 63% and 72% which is about the same. The variable importance function has the same four variables as before occupying the top spots.
+
+```{r}
+#CHUNK 10
+set.seed(42)
+#Set up the grid.
+rfGrid <- expand.grid(mtry = c(1:7)) 
+
+#Set the controls
+ctrl <- trainControl(method = "repeatedcv", 
+                     number = 5, 
+                     repeats = 3) 
+
+#Train the model
+rf2 <- train(factor(TERM_FLAG) ~.,
+             data = tlFLAG.t,
+             method = "rf", 
+             trControl = ctrl,
+             tuneGrid = rfGrid,
+             ntree = 500, 
+             nodesize = 5,
+             importance = TRUE
+             )
+
+#View the output
+rf2
+ggplot(rf2)
+
+#Obtain the confusion matrices
+pred2 <- predict(rf2, tlFLAG.t)
+
+confusionMatrix(pred2, factor(tlFLAG.t$TERM_FLAG))
+
+pred2.v <- predict(rf2, newdata = tlFLAG.v)
+
+confusionMatrix(pred2.v, factor(tlFLAG.v$TERM_FLAG)) 
+
+#Obtain the importance of the features
+varImp(rf2)
+                     
+```
+
+Run CHUNK 11 to fit a pruned tree to the full dataset.
+
+the original pruned tree did a reasonable job and lends itself to easy interpretation. The last step is to fit that tree to the full dataset, Of course, slightly different branches may result.
+
+```{r}
+#CHUNK 11
+
+set.seed(1234)
+
+tree.full <- rpart(TERM_FLAG~., 
+                   data = tlFLAG, 
+                   method = "class",
+                   control = rpart.control(minbucket = 5, cp = 0.005, maxdepth = 7), 
+                   parms = list(split = "gini"))
+
+tree.full2 <- prune(tree.full, cp = tree.full$cptable[which.min(tree.full$cptable[, "xerror"]), "CP"])
+
+rpart.plot(tree.full2)
+
+pred.full2 <- predict(tree.full2, type = "class")
+
+confusionMatrix(pred.full2, factor(tlFLAG$TERM_FLAG))
+
+
+```
+

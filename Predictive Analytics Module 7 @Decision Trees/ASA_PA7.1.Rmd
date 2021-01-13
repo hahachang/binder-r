@@ -1,0 +1,126 @@
+---
+title: "Predicitive Analtyics Exam Module 7 Section 1"
+output: html_notebook
+---
+
+Run CHUNK 1 to see some simulated data used in the Exercise.
+
+
+```{r}
+#CHUNK 1
+x <- matrix(runif(10000), 5000, 2)
+plot(x, col = ifelse(x[, 1] > .6 & x[, 2] > .5, "red", "black"))
+```
+
+Run CHUNK 2 to make a single linear split where the first component is either less than or greater than or equal to 0.6.  
+  
+```{r}
+#CHUNK 2
+plot(x, col = ifelse(x[, 1] > .6 & x[, 2] > .5, "red", "black"))
+abline(v = .6, col = "blue", lty = 1, lwd = 3)
+```
+  
+Run CHUNK 3 to see the answer to the Knowledge Check
+  
+```{r}
+#CHUNK 3
+plot(x, col = ifelse(x[, 1] > .6 & x[, 2] > .5, "red", "black"))
+abline(v = .6, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .6, y0 = .5, x1 = 1, y1 = .5, col = "blue", lty = 1, lwd = 3)
+```
+
+Run CHUNK 4 to simulate data for the Knowledge Check
+  
+```{r}
+#CHUNK 4
+set.seed(10000)
+x <- matrix(runif(1000, 1, 5), 100, 2)
+plot(x, type = 'p', col = ifelse(x[, 1] > 3 & x[, 2] < 4, "red", (ifelse(x[, 1] <= 3 & x[, 2] < 2, "red", "black"))))
+```
+
+Run CHUNK 5 to see a gaphic solution.
+
+```{r}
+#CHUNK 5
+set.seed(10000)
+x <- matrix(runif(1000, 1, 5), 100, 2)
+plot(x, type = 'p', col = ifelse(x[, 1] > 3 & x[, 2] < 4, "red", (ifelse(x[, 1] <= 3 & x[, 2] < 2, "red", "black"))))
+abline(v = 3, col = "blue", lty = 1, lwd = 3)
+segments(x0 = 1, y0 = 2, x1 = 3, y1 = 2, col = "blue", lty = 1, lwd = 3)
+segments(x0 = 3, y0 = 4, x1 = 5, y1 = 4, col = "blue", lty = 1, lwd = 3)
+```  
+
+Run CHUNK 6 to see a new plot for Exercise 7.1.2.
+
+```{r}
+#CHUNK 6
+set.seed(10000)
+x <- matrix(runif(10000), 1000, 2)
+par(mfrow = c (1, 2))
+
+# Plot A
+plot(x, main = "A", type = 'p', col = ifelse(x[, 2] < .1, "red", 
+                                         (ifelse(x[, 1] + rnorm(2, 0, .1) < .7 & x[, 2] < .4, "red", 
+                                              (ifelse(x[, 1] + rnorm(2, 0, .1) < .4 & x[, 2] < .7, "red", 
+                                                   (ifelse(x[, 1] < .1, "red", 
+                                                        (ifelse(round(x[, 2], 2) == 0.6, "red", 
+                                                            (ifelse(round(x[, 1], 2) == 0.8, "red", "black"))))))))))))
+segments(x0 = .1, y0 = 1, x1 = .1, y1 = .7, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .1, y0 = .7, x1 = .4, y1 = .7, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .4, y0 = .7, x1 = .4, y1 = .4, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .4, y0 = .4, x1 = .8, y1 = .4, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .8, y0 = .4, x1 = .8, y1 = .1, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .8, y0 = .1, x1 = 1, y1 = .1, col = "blue", lty = 1, lwd = 3)
+
+# Plot B
+set.seed(10000)
+x <- matrix(runif(10000), 1000, 2)
+plot(x, main = "B", type = 'p', col = ifelse(x[, 2] < .1, "red", 
+                                         (ifelse(x[, 1] + rnorm(2, 0, .1) < .7 & x[, 2] < .4, "red", 
+                                              (ifelse(x[, 1] + rnorm(2, 0, .1) < .4 & x[, 2] < .7, "red", 
+                                                   (ifelse(x[, 1] < .1, "red", 
+                                                        (ifelse(round(x[, 2], 2) == 0.6, "red", 
+                                                            (ifelse(round(x[, 1], 2) == 0.8, "red", "black"))))))))))))
+segments(x0 = .1, y0 = 1, x1 = .1, y1 = .7, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .1, y0 = .7, x1 = .4, y1 = .7, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .4, y0 = .7, x1 = .4, y1 = .6, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .4, y0 = .6, x1 = 1, y1 = .6, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .4, y0 = .58, x1 = 1, y1 = .58, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .4, y0 = .58, x1 = .4, y1 = .4, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .4, y0 = .4, x1 = .8, y1 = .4, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .78, y0 = .4, x1 = .78, y1 = 1, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .8, y0 = 1, x1 = .8, y1 = .1, col = "blue", lty = 1, lwd = 3)
+segments(x0 = .8, y0 = .1, x1 = 1, y1 = .1, col = "blue", lty = 1, lwd = 3)
+```
+
+
+CHUNK 7 reproduces the example in Section 23.4 of R for Everyone.
+
+```{r}
+#CHUNK 7
+
+#Load the needed libraries
+library(rpart)  #Recursive Partitioning and Regression Trees
+library(rpart.plot)
+
+#The file name is german.csv as it is credit data from Germany
+credit <- read.csv(file="german.csv")
+head(credit)
+
+#R for Everyone provides a key to decode the factor levels, we will use them as is except for re-coding the target variable, "Credit." This is needed because the data as provided is numeric and hence rpart will try and fit a regression tree and not a classification tree. As an aside, at your exam if you want to do this but are stumped regarding R commands, you could make these changes in Excel prior to reading the file. 
+
+credit$Credit <- ifelse(credit$Credit == 1, "Good", "Bad")
+
+
+#Fit the tree using selected variables. Parameters will take default values.
+tree <- rpart(Credit ~ CreditAmount + Age + CreditHistory + Employment, data = credit)
+
+#Display the output from fitting the true
+tree
+
+#Plot the tree, use ?rpart.plot in the console to see how extra = 4 affects the output.
+rpart.plot(tree, extra = 4)
+```
+
+
+
