@@ -1,0 +1,507 @@
+---
+title: "SOA Predictive Analytics Exam, Section 1.2"
+output:
+  html_notebook: default
+  
+---
+
+Basic Math Section
+
+Work with the following code after reading Section 4.1. As a reminder, when writing R chunks you do not include the ">" as seen in the text. You will not see the result until you click the green triangle.
+
+```{r}
+#Add 3 plus 5 and then multiply the sum by 4 to obtain 32.
+
+(3 + 5)*4
+
+#Calculate the average of 3, 7, and 8 to obtain 6.
+
+x <- c(1, 2, 3)
+mean(x)
+
+```  
+
+Variables Section
+
+Work with the following code after reading Section 4.2.
+
+```{r}
+#Assign 3 to x, 5 to y and 4 to z. Then complete the calculation from the previous chunk
+
+x = 3
+y = 5
+z = 4
+(x + y)*z
+
+#You should see x, y, and z and their values in the Environment area (usually upper right). With the three variables in place, use rm() to remove z and then retry the calculation (which should prodice an error).
+rm(z)
+(x + y)*z
+
+
+```
+
+Data Types Section
+
+Work with the following code after reading Section 4.3. We now begin each chunk with rm(list=ls()). This removes all variables from the environment so you start with a clean slate. Comment it out (with #) if you want to preserve earlier variables.
+
+```{r}
+rm(list=ls())
+#Set x equal to 5 and test to see if it is numeric. 
+
+x = 5
+
+is.numeric(x)
+
+
+#Test to see if x is an interger. It should be false. Note that while the number 5 is indeed an integer, the earlier assignment treated it as a real number.
+
+is.integer(x)
+
+#Set y equal to 5, storing it as an integer and test to see that it is. Also verify that y is numeric.
+
+y = as.integer(5)
+is.integer(y)
+
+#Set z as an integer variable with value 3. 
+#Let a = x-y, b = y-z nad c=y/z and display each value. 
+#Check, using class() to see if the data type is what you expect.
+
+z = 3
+a = x - y
+b = y - z
+c = y/z
+
+a
+b
+c
+
+#Set e as the date February 29, 1996 and f as the date March 1, 1997. Set g = f-e and determine the number of days between these dates. Use as.numeric on each date and then subtract, putting the result in h and observe any diferences from g.
+
+
+
+#Set p as 5L/3L and q as 5/3. Then conduct a logic test to see if they are equal
+
+
+
+```
+
+Vectors Section, Part 1
+
+Work with the following code after reading Section 4.4.1.
+
+```{r}
+rm(list=ls())
+
+#Create two veectors, x with elements 1,2,3,4,5 and y with elements 5,4,3,2,1. 
+
+x = c(1, 2, 3, 4, 5)
+y = c(5, 4, 3, 2, 1)
+
+
+#add 3 to each element of x, do not save the result, but verify the answer 4,5,6,7,8.
+
+x + 3
+
+#square each member of y, do not save the result, but verify the answer 25,16,9,4,1.
+
+y^2
+
+#Add x and y, verify that the answer is 6,6,6,6,6
+
+x + y
+
+#Create the vector z with elements 8,9,10. Verity that x+z is 9,11,13,12,14.
+
+z = c(8, 9, 10)
+x + z
+
+#Check to see which elements of x are less than the corresponding element of y
+
+x < y
+
+#Access the fifth element of x
+
+x[5]
+
+```
+
+Vectors Section, Part 2
+
+Work with the following code after reading Section 4.4.2.
+
+```{r}
+rm(list=ls())
+
+#You will work with the following vector that contains one of four codes (MS = male smoker, MN = male nonsmoker, FS = female smoker, FN = fermale nonsmoker)
+
+s <- c("MN", "MN", "FS", "FN", "MS", "FN", "FN","MN", "MN", "MS", "FN")
+
+s
+
+class(s)
+ 
+#Observe that s is a vecore of characters
+
+#Convert s to s.factor using the as.factor function and then display s.factor. There should be no quotation marks. Check the class of this new vector.
+
+s = as.factor(s)
+s
+
+#Check the integer values of the elements so see how they were coded.
+
+s[1]
+s[2]
+s[3]
+s[4]
+
+```
+
+Functions Section
+
+Work with the following code after reading Sections 4.5 and 4.6
+
+```{r}
+rm(list=ls())
+
+#Create the vector x of length 1000 that contains randomly generated uniform numbers between 0 and 1. Hint: use the function runif (for "random uniform" not "run if") and search for help to determine the arguments.
+
+x = runif(1000)
+
+#Use functions to calculate the sample mean and variance of x. Your values should be close to 1/2 and 1/12. Hint: the function to calculate the variance is not called "variance."
+
+mean(x)
+var(x)
+
+#Variances can be calulated by dividing by n or by n-1. Calculate the variance using basic math functions to see which denominator R is using.
+
+sum((x - mean(x))^2)/(length(x) - 1)
+
+```
+
+Missing Data Section
+
+Work with the following code after reading Section 4.7.
+
+```{r}
+rm(list=ls())
+
+#Use this vector with some missing values
+
+x <- c(1,2,NA,4,5,6)
+
+#Check to see if it has any missing valules
+
+is.na(x)
+
+#Try and compute the mean, first using mean() and then using mean(, na.rm=TRUE)
+
+mean(x)
+mean(x, na.rm=TRUE)
+
+#Use the following to see the difference between NA and NULL
+
+y<-c(1,2,NA,4)
+y
+is.na(y)
+is.null(y)
+y<-NULL
+y
+is.na(y)
+is.null(y)
+
+```
+
+Data Structures Section
+
+Work with the following code after reading Section 5.1.
+
+```{r}
+rm(list=ls())
+
+#Work with the following three vectors:
+
+age <- c(35, 42, 51, 38, 19, 45, 63)
+amount <- c(1, 3, 2, 5, 2, 3, 7)
+type <- c("term","universal","term","whole","universal","term","whole")
+
+#Use the data.frame function to make a data frame from these three vectors and then display the data frame. Note that these variables were named in advance, so names didn't have to be assigned. Note that the data frame deduced that the first two variables are numeric and the third a factor variable. Assign the name df to your data frame.
+
+df <- data.frame(age,amount,type)
+
+#Determine the number of rows and the number of columns.
+
+nrow(df)
+ncol(df)
+dim(df)
+
+length(df[,1])
+length(df)
+
+#Use head() to view the first six row.
+
+head(df)
+
+#Display only the values of amount two different ways. One uses $amount and the other uses [,2]
+
+df$amount
+df[,2]
+
+#Display only the first two columns using [,-3] 
+#(Negative indices specify dropping (rather than retaining) particular elements)
+
+df[,-3]
+
+#The text refers to a model matrix such as used in regression. While many regression functions in R handle this automatically, we can also turn a data frame into a design matrix. Suppose we are trying to predict amount based on age and type. The following code creates a model matrix. The first term specifies target and predictor variables. The second identifies the data frame to convert. You will see that an intercept was added (the -1 in the text example indicates to omit that column.) Also note that the function arbitrarily assigned "term" as the base class.
+
+mm <- model.matrix(amount~age+type, data=df)
+mm
+
+```
+
+Reading and Writing Data Section
+
+Work with the following code after reading to Section 6.1.1 and Section 6.6. In this course all supplied data is in csv format so methods of loading other file types will not be necessary.
+
+```{r}
+rm(list=ls())
+
+#Use read.csv to read in the gapminder data into a data frame called gd. Note that if the file is in your working directory you just need to enclose the filename (including the .csv extension) in quotation marks. You can determine your working directory by the function getwd() in the Console. You can change the working directory via the setwd() function or from the Session menu. Then use head() to see the first six rows and the values of the six variables.
+
+gd <-read.csv("gapMinderDataFiveYear.csv")
+head(gd)
+
+#Saving data is not discussed in Chapter 6. The command is simple. The following code does some simple maniuplations of the file and then saves it with a new name. After running this chunk, verity that the file is in your working director and open it in Excel or Notepad to verify the contents.
+
+gd$year <- gd$year - 1950 #subtracts 1950 from each year and replaces the original value.
+gd$gdp <- gd$pop * gd$gdpPercap / 1000000 #Calculates total gdp in millions
+write.csv(gd, file="gapMinderNew.csv")
+
+#Note that if you re-run the chunk, R will not warn you that you are overwriting an existing file.
+
+#run the following commands to load the ggplot2 package and list the available datasets. Load and save the mpg file as a CSV file. Name the file MilesPerGallon.csv
+
+#IMPORTANT: We will use the mpg dataset later on. If you load it this way it is as a "tibble." Tibbles are discussed in R for Everyone. They behave differently from data frames and hence not all functions will work the same way. Since we will not use tibbles in this course, this file should be read from your directory when needed.
+
+library(ggplot2)
+data(package="ggplot2")$result[,"Item"]
+
+MilesPerGallon <- ggplot2::mpg
+
+write.csv(MilesPerGallon, file = "MilesPerGallon.csv")
+
+```
+
+Basic Plots Section
+
+Work with the following code after reading Chapter 7. There will be several chunks to work through the sections of this chapter. Here the plots are made for you. Consider practicing by ploting other variables or changing parameters, such as the binwidth in a histogram.
+
+```{r}
+rm(list=ls())
+
+#We will work with the mpg dataset seen earlier. The only variables used are displ (engine displacement in liters), cyl (number of cylinders), drv (f-front, r-rear, 4-four wheel), and hwy (highway miles per gallon). The following code loads the data and removes the other variables and saves the file in case you want that version of it later.
+
+library(ggplot2)
+MPG <- read.csv(file="MilesPerGallon.csv")
+MPG <- MPG[,c(4,6,8,10)]
+head(MPG)
+write.csv(MPG, file="MPG.csv")
+
+#You should have observed that drv is a character variable, not a factor varialbe. That can be remedied as follows.
+
+MPG$drv <- as.factor(MPG$drv)
+head(MPG)
+levels(MPG$drv)
+
+#Use the base graphics to make a histogram of hwy and scatterplots of hwy against each of the three predictor variables.
+
+hist(MPG$hwy)
+plot(hwy~displ,data=MPG)
+plot(hwy~cyl,data=MPG)
+plot(hwy~drv,data=MPG)
+
+#Note that plot seemed to understand that a bloxplot would be better for a factor variable.
+```
+
+The next several chunks will continue to work with plots, The data have not been cleared, the MPG data frame is still available. The following is from Section 7.2.1 using ggplot for histograms.
+
+```{r}
+#Use ggplot to make two histograms of hwy
+library(ggplot2)
+library(gridExtra)
+h1<-ggplot(data=MPG) + geom_histogram(aes(x=hwy))
+h2<-ggplot(data=MPG) + geom_histogram(aes(x=hwy,..density..))
+
+#use the gridExtra package to place both plots on one screen. The following command presents them side by side.
+grid.arrange(h1,h2,ncol=2)
+
+#There is a subtle difference in the two plots. The one on the left is technically not a histogram. It is a bar chart that plots the number of observations in each interval. A true histogram is also a probability density function with the total area being equal to one. The "..density.." item added to the function ensures this happens. If the bin widths are unequal, only the second approach makes a proper histogram.
+```
+
+This chunk relates to Section 7.2.2. on scatterplots.
+
+```{r}
+#Use ggplot to make a scatterplot of hwy vs disp. Then use color to idenify point by cyl.
+
+s1<-ggplot(data=MPG) + aes(x=displ,y=hwy) + geom_point()
+s2<-ggplot(data=MPG) + aes(x=displ,y=hwy) + geom_point(aes(color=cyl))
+
+#You will see that when the s2 plot is made the colors for cyl use a gradient because it is considered a continuous numerical variable. The following allows for better spearation.
+
+MPG$cyl.factor <- as.factor(MPG$cyl)
+s3<-ggplot(data=MPG) + aes(x=displ,y=hwy) + geom_point(aes(color=cyl.factor))
+grid.arrange(s1,s2,s3,ncol=3)
+```
+
+This chunk continues 7.2.2 and covers facets.
+
+```{r}
+#This one makes a separate scatterplot for each number of cylinders.
+ggplot(data=MPG, aes(x=displ,y=hwy)) + geom_point(aes(color=cyl.factor)) + facet_wrap(~cyl.factor)
+```
+
+The next chunk makes two boxplots from Section 7.2.3. We will not cover violin plots.
+
+```{r}
+#First boxplot is of hwy. Note the addition of x=1. This is because theh program is accustomed to make several boxplots for comparison, but we want only one.
+b1 <- ggplot(data=MPG,aes(y=hwy,x=1))+geom_boxplot()
+
+#This boxplot splits by drv.
+b2 <- ggplot(data=MPG,aes(y=hwy,x=drv))+geom_boxplot()
+
+grid.arrange(b1,b2,ncol=2)
+```
+
+The final chunk makes line graphs from Section 7.2.4. We will not cover themes (Section 7.2.5).
+
+```{r}
+#There is nothing in the MPG data worthy of making a line plot. What about just plotting the hwy values as a sequence. we begin by adding the numbers 1 to n to the data frame
+
+MPG$item <- seq(1:nrow(MPG))
+
+#Here is the code for a line graph
+l1 <- ggplot(data=MPG, aes(x=item,y=hwy)) + geom_line()
+
+#Now separate the lines by cyl.factor. Note that you can add to an existing plot rather than repeat the code.
+
+l2<-l1 + aes(color=cyl.factor)
+
+grid.arrange(l1,l2,ncol=2)
+
+#Of course, these plots make little sense as the ordering of the values is random.
+```
+
+Writing Functions Section
+
+While it is unlikely you will need to write functions for your exam, it is worth understanding how R functions work, just in case. the following chunks offer an opoprtunity to practice this.
+
+```{r}
+rm(list=ls())
+
+#Write a function that calculates the mean and standard deviation for a selected variable number in a dataset.  Try your hand at it here. The next chunk has a solution. 
+
+
+```
+
+Here is a solution. Run the chunk to create the function and than type commands in the Console to see outpout.
+
+```{r}
+meansd <- function(dataframe, varno)
+{
+  col.vector <- dataframe[, varno]
+  m <- mean(col.vector)
+  s <- sd(col.vector)
+  
+  return(c(m,s))
+}
+```
+
+Control Statements Section
+
+We will continue with the function just written and add some if statements. 
+
+
+Modfiy the code to first check that the entry for "varno" is both an integer, is in the range of the available variables, and if the variable values are numeric. if any of the items is not true, print an appropriate message. Use the next chunk to do that, a solution is provided in the next chunk.
+
+```{r}
+#Modify this code to check if varno is appropriate
+meansd <- function(dataframe, varno)
+{
+  col.vector <- dataframe[, varno]
+  m <- mean(col.vector)
+  s <- sd(col.vector)
+  
+  return(c(m,s))
+}
+```
+
+```{r}
+#Solution
+meansd <- function(dataframe, varno)
+{
+  if(floor(varno) != varno) {
+    return("varno is not an integer") #Note, is.integer cannot be used as a whole number is likely entered as, say, 4, and not 4L
+  }
+  if(varno > ncol(dataframe)) {
+    return("varno is too large")
+  }
+  if(varno < 1) {
+    return("varno is too small")
+  }
+  if(is.numeric(dataframe[,varno]) == FALSE) {
+    return("varno is not numeric")
+  }
+  col.vector <- dataframe[, varno]
+  m <- mean(col.vector)
+  s <- sd(col.vector)
+  
+  return(c(m,s))
+}
+```
+
+Loops Section
+
+Write a simple loop to cycle through the meansd function from column 1 up to the number of columns. You will need to use print inside the loop to display the results.
+
+```{r}
+
+meansd <- function(dataframe, varno)
+{
+  if(floor(varno) != varno) {
+    return("varno is not an integer") #Note, is.integer cannot be used as a whole number is likely entered as, say, 4, and not 4L
+  }
+  if(varno > ncol(dataframe)) {
+    return("varno is too large")
+  }
+  if(varno < 1) {
+    return("varno is too small")
+  }
+  if(is.numeric(dataframe[,varno]) == FALSE) {
+    return("varno is not numeric")
+  }
+  col.vector <- dataframe[, varno]
+  m <- mean(col.vector)
+  s <- sd(col.vector)
+  
+  for (i in c(1:length(col.vector))) {
+    print(col.vector[i])
+  }
+    
+  return(c(m,s))
+}
+
+```
+
+rbind and cbind Section
+
+Section 14.1 introduces two simple functions.
+
+```{r}
+#Suppose we want to examine the effect of adding an outlier to the MPG data. Here is an easy way to do that
+
+newcar <- c(1.2, 3, "f", 16)
+MPG.outlier <- rbind(MPG, newcar)
+tail(MPG.outlier)
+
+#You will see that the new observation has been added as number 235.
+```
+

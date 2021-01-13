@@ -1,0 +1,113 @@
+---
+title: "SOA Predictive Analtyics Exam, Section 1.3"
+output:
+  html_notebook: default
+---
+
+
+Modify CHUNK 1 per the instructions in Exercise 1.3.1.
+
+```{r}
+#CHUNK 1
+numSeq<-c(0:9)
+n <- 1e6
+GetNthLexPermutation <- function(sequence,n) {len <- length(sequence)  
+  if (n > prod(1:len)|n<1) {stop("The number required is beyond the number of possible permutations.")}
+  else {nth <- numeric(len)  
+    for (i in 1:(len - 1)) {
+      if (n==0) {nth[i]<-sequence[length(sequence)]}
+      else {tmp<-prod(1:(len-i)) 
+        div<-floor((n-1)/tmp)
+        nth[i]<-sequence[div+1]}
+      n <- n%%tmp
+      sequence <-sequence[sequence!=nth[i]]}
+    nth[len] <- sequence
+    return(nth)}} 
+cat("The result is:",GetNthLexPermutation(numSeq,n),"\n")
+```
+
+The solution to Exercise 1.3.1 is in CHUNK 2.
+
+```{r}
+#CHUNK 2
+numSeq <- c(0:9)
+n <- 1e6
+
+# Gets the nth lexicographical permutation of the given sequence
+GetNthLexPermutation <- function(sequence, n) {
+  
+  len <- length(sequence)  # calculate the length of the sequence
+  
+  # Check if n is within the total number of permutations
+  if (n > prod(1:len) | n < 1) {
+    stop("The number required is outside the number of possible permutations.")
+  } else {
+    nth <- numeric(len)  # Create a vector called nth of length len to store the nth permutation
+    
+    # Go through each place in the vector nth and work out what character belongs there
+    for (i in 1:(len - 1)) {
+      # We change n each time, when it is 0 we want the last character in what is left of the sequence
+      if (n == 0) { 
+        nth[i] <- sequence[length(sequence)]
+      } else {
+        # The next character is given by the (n-1)/(total number of permutations) position in the remaining sequence
+        tmp <- prod(1:(len - i)) 
+        div <- floor((n - 1) / tmp)
+        nth[i] <- sequence[div + 1]
+      }
+      
+      n <- n %% tmp  # Change n to be n mod tmp (we have found the first few characters that start
+                     # the nth permutation, so we are looking for the remaining characters which is the (n mod tmp)th
+                     # permutation of the remaining characters)
+      sequence <- sequence[sequence != nth[i]]  # Remove the character we just used from the sequence 
+    }
+    
+    nth[len] <- sequence  # There is only one character left in the sequence which is the last one
+    return (nth)  # Return the sequence
+  }
+}
+
+# Print out the results
+cat("The result is:", GetNthLexPermutation(numSeq, n), "\n")
+```
+
+Exercise 1.3.2: Use CHUNK 3 to load the gapminder data into an object.
+
+```{r}
+#CHUNK 3
+# Read the data into an object called "data.full"
+
+data.full = read.csv("gapMinderDataFiveYear.csv")
+
+```
+
+CHUNK 4 provides space to complete Exercise 1.3.2.
+
+```{r}
+#CHUNK 4
+# Write your R code here
+
+head(data.full)
+summary(data.full)
+class(data.full)
+
+```
+
+CHUNK 5 contains a sample solution to Exercise 1.3.2.
+
+```{r}
+#CHUNK 5
+# Sample solution
+
+# Read the data into an object called data.full:
+data.full <- read.csv("gapminderDataFiveYear.csv")
+
+# Do some basic exploration
+colnames(data.full)
+data.full[1:10,]
+summary(data.full)
+#Recall that sapply was discussed in Chapter 11 of R for Everyone
+sapply(data.full, class)
+
+```
+

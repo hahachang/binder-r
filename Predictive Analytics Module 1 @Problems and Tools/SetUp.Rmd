@@ -1,0 +1,35 @@
+---
+title: "SOA Predictive Analytics Exam"
+output:
+  output: html_notebook
+  
+---
+
+Run CHUNK 1 to load a dataset and display the first few rows. Before doing so, you must ensure that the working directory is the one where you saved the dataset. To change the working directory, go to Sessions>Set Working Directory.
+
+
+```{r}
+#CHUNK 1
+#Load the data. This commmand produces no output
+data.all <- read.csv("BreastCancerWisconsinDataSet.csv")
+#Display the first six rows of the data set. They should appear below.
+head(data.all)
+```  
+
+Run the code in CHUNK 2 to construct a decision tree. 
+ 
+```{r}
+#CHUNK 2
+#Load the two needed library
+library(rpart)
+library(rpart.plot)
+
+#Construct a decision tree to predict the variable "diagnosis." First, list the variables to be used as predictors.
+formula <- as.formula("diagnosis~radius_mean+texture_mean+perimeter_mean+area_mean+smoothness_mean+compactness_mean+concavity_mean")
+
+#Use the rpart package to build a classification tree
+tree <- rpart(formula,data=data.all,cp=.009)
+
+#Use the rpart.plot package to display the tree.
+rpart.plot(tree,type=0,digits=4)
+```

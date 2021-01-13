@@ -1,0 +1,90 @@
+---
+title: "SOA Predictive Analtyics Exam, Section 1.4"
+output:
+  html_notebook: default
+---
+
+
+CHUNK 1 loads the gapminder data
+
+```{r}
+#CHUNK 1
+rm(list=ls())
+# Read the data into an object called data.full:
+
+data.full <- read.csv("gapminderDataFiveYear.csv")
+
+```
+
+Use CHUNK 2 to split the data into 80% training and 20% testing.
+    
+```{r}
+#CHUNK 2
+# Note that this method does not do a precise 80/20 split. Instead, each observation is given an 80% chance of being in the training set. The set.seed function ensures you will get the same random split each time you run the code. With this seed, the ouput shows that 80.87% of the observations are in the training set.
+
+set.seed(101)
+trainRatio = 0.8
+data.full$random <- runif(nrow(data.full))
+data.train <- data.full[data.full$random<trainRatio,]
+data.test <- data.full[data.full$random>=trainRatio,]
+nrow(data.train)/nrow(data.full)
+nrow(data.test)/nrow(data.full)
+
+```
+  
+Use CHUNK 3 to make histograms of the life expectency variable for each dataset. 
+
+```{r}
+#CHUNK 3
+#Plot a histogram of the full dataset
+library(ggplot2)
+ggplot(data.full, aes(x=data.full$lifeExp)) + geom_histogram() + ggtitle("lifeExp for Full Dataset")
+ggplot(data.train, aes(x=data.train$lifeExp)) + geom_histogram() + ggtitle("lifeExp for Training Dataset")
+ggplot(data.test, aes(x=data.test$lifeExp)) + geom_histogram() + ggtitle("lifeExp for Testing Dataset")
+```
+
+Use CHUNK 4 to make a scatterplot. This time the code saves the plot in your working directory. It could then be inserted in a Word document.
+
+```{r}
+#CHUNK 4
+# Sample solution
+png(filename="scatterplot.png")
+ggplot(data.full, aes(x=data.full$year, y=data.full$lifeExp)) + geom_point(aes(color=data.full$continent))
+dev.off()
+```
+
+CHUNK 5 runs an ordinary least squares model on the training set and prints a summary of the results.
+  
+```{r eval = FALSE}
+#CHUNK 5
+
+#Write the formula first. This makes it easier to edit the formula should we wish to test alternative sets of variables.
+formula <- as.formula("lifeExp~year+pop+continent+gdpPercap")
+
+#Execute the model, putting the results in an object. This line will not generate any output.
+ols.train <- lm(formula, data=data.train)
+
+#Print a summary of the results
+summary(ols.train)
+
+```
+
+
+CHUNK 6 evaluates the mean squared error of prediction on the training and testing datasets.
+
+```{r}
+#CHUNK 6
+
+#First we need the predicted values using the fitted model as applied to the two sets.
+predict.train <- predict(ols.train, data.train, type = "response")
+predict.test <- predict(ols.train, data.test, type="response")
+mse.train <- sqrt(sum((predict.train-data.train$lifeExp)^2)/nrow(data.train))
+mse.test <- sqrt(sum((predict.test-data.test$lifeExp)^2)/nrow(data.test))
+mse.train
+mse.test
+
+
+```
+
+
+
