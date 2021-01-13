@@ -1,0 +1,199 @@
+---
+title: "SOA Predictive Analytics Exam, Module 8 Sample Project Work"
+output: html_notebook
+---
+
+Run CHUNK 1 to load and summarize the data. Note there is a command to clear the environment. Comment it out if you don't want this to happen.
+
+```{r}
+#CHUNK 1
+
+rm(list=ls())
+tlFLAG <- read.csv(file = "termLifeFLAG.csv")
+summary(tlFLAG)
+names(tlFLAG)
+```
+
+Run CHUNK 2 to remove variables that will not be used. These are the same that were removed in Module 7 plus the target variable is also removed.
+
+```{r}
+#CHUNK 2
+
+tlPCA <- tlFLAG[,-c(1,2,3,11,12,13,16)]
+names(tlPCA)
+```
+
+Run CHUNK 3 to perform PCA on all 10 variables.
+
+```{r}
+#CHUNK 3
+
+tlPCA.1 <- prcomp(tlPCA, center = TRUE, scale. = TRUE)
+summary(tlPCA.1)
+```  
+
+Run CHUNK 4 to diplay the loadings.
+
+```{r}
+#CHUNK 4
+
+tlPCA.1$rotation
+```    
+
+PC1 has the same sign for every variable and doesn't seem to provide much insight. PC2 has six variables in one direction and four in the other. The four in the other direction include the three that were used in the classification tree.
+
+Run CHUNK 5 to perform PCA on six of the variables, check the output, and create a new feature based on the first component.
+
+```{r}
+#CHUNK 5
+
+tlPCA.2 <- prcomp(tlPCA[ , c(1,3,5,6,7,10)], center = TRUE, scale. = TRUE)
+summary(tlPCA.2)
+
+#prcomp stores the calculated principal components in "x". Here the first one is attached to the data set as an 11th variable
+
+tlPCA.new <- tlPCA
+tlPCA.new$PC1 <- tlPCA.2$x[,1]
+
+#We now remove the six variables are being replaced with the single principal component
+
+tlPCA.new <- tlPCA.new[ , c(2,4,8,9,11)]
+
+```
+
+Run CHUNK 6 to re-attach the target variable and create a pruned tree using the five predictors. 
+
+```{r}
+#CHUNK 6
+
+tlPCA.new$TERM_FLAG <- tlFLAG$TERM_FLAG
+
+library(rpart)
+library(rpart.plot)
+library(caret)
+set.seed(1234)
+
+tree.PCA <- rpart(TERM_FLAG~., 
+                  data = tlPCA.new, 
+                  method = "class",
+                  control = rpart.control(minbucket = 5, cp = 0.005, maxdepth = 7), 
+                  parms = list(split = "gini"))
+
+tree.PCA2 <- prune(tree.PCA, cp = tree.PCA$cptable[which.min(tree.PCA$cptable[, "xerror"]), "CP"])
+
+rpart.plot(tree.PCA2)
+
+pred.PCA2 <- predict(tree.PCA2, type = "class")
+
+confusionMatrix(pred.PCA2, factor(tlPCA.new$TERM_FLAG))
+
+
+```
+
+We now turn to cluster analysis. Run CHUNK 7 to reload and prepare the data.
+
+```{r}
+#CHUNK 7
+
+rm(list=ls())
+tlKmean <- read.csv(file = "termLifeFLAG.csv")
+tlKmean <- tlKmean[,c(7,9)]
+```
+
+Run CHUNK 8 to get the results of varying K from 1 to 6.
+
+```{r}
+#CHUNK 8
+
+#Note nstart=10. This parameter runs the alogorithm 10 times, with different reandom starting centers each time. The cluster with the highest between sum of squares is selected. The seed is set each time so that we can get the same result if we rerun one of them.
+
+for (i in 1:6)
+{ set.seed(1000)
+  cluster <- kmeans(tlKmean,centers=i,nstart=10)
+  r <- cluster$betweenss/cluster$totss
+  print(paste("clusters:",i,"ratio:",r))
+}
+```
+
+Run CHUNK 9 to take a look at the result with 3 clusters.
+
+```{r}
+#CHUNK 9
+
+library(ggplot2)
+set.seed(1000)
+cluster3 <- kmeans(tlKmean,centers=3,nstart=10)
+tlKmean$group <- as.factor(cluster3$cluster)
+
+#This plot uses "geom_count" rather than "geom_point." This is useful for discrete data with multiple observations with the same pair of values. The stat="sum" argument makes theh point size proportional to the number of observations with that pair of values.
+p1 <- ggplot(data = tlKmean, aes(x = EDUCATION, y = SEDUCATION, col = group)) + 
+      geom_count(stat="sum") +
+      ggtitle("k=3")
+p1
+```
+
+CHUNK 10 creates the new variable and attaches it to the data set as used in Module 7.
+
+```{r}
+#CHUNK 10
+
+tlFLAG <- read.csv(file = "termLifeFLAG.csv")
+tlFLAG <- tlFLAG[,-c(1,2,11,12,13,16)]
+tlFLAG$educsum <- tlFLAG$EDUCATION + tlFLAG$SEDUCATION
+tlFLAG$educLevel <- ifelse(tlFLAG$SEDUCATION == 0, "N", ifelse(tlFLAG$educsum < 28.5, "L", "H"))
+tlFLAG <- tlFLAG[ ,-c(5,7,12)]
+```
+
+Run CHUNK 11 to fit a tree to the new variables.
+
+```{r}
+#CHUNK 11
+library(rpart)
+library(rpart.plot)
+library(caret)
+set.seed(1234)
+
+tree.full <- rpart(TERM_FLAG~., 
+                   data = tlFLAG, 
+                   method = "class",
+                   control = rpart.control(minbucket = 5, cp = 0.005, maxdepth = 7), 
+                   parms = list(split = "gini"))
+
+tree.full2 <- prune(tree.full, cp = tree.full$cptable[which.min(tree.full$cptable[, "xerror"]), "CP"])
+
+rpart.plot(tree.full2)
+
+pred.full2 <- predict(tree.full2, type = "class")
+
+confusionMatrix(pred.full2, factor(tlFLAG$TERM_FLAG))
+
+
+```
+
+Run CHUNK 12 to perform hierarchical clustering on the two variables.
+
+```{r echo = FALSE}
+#CHUNK 12
+
+# Calculate the dissimilarity structure for our dataset
+d_struct <- dist(tlKmean)
+
+# Cluster the dissimilarity structure of our data
+hc <- hclust(d_struct)
+
+# Plot the dendrogram of our hierarchical cluster
+plot(hc)
+
+# Simple function to create a plot given a dataframe, hclust, and number of clusters
+plot_cluster_slice <- function(df, hc, numclusters) {
+  df$clusters <- as.factor(cutree(hc, numclusters))
+  ggplot(data = df, aes(x = EDUCATION, y = SEDUCATION, col = clusters)) + 
+    geom_count(stat="sum")
+    }
+
+plot_cluster_slice(tlKmean, hc, 2)
+plot_cluster_slice(tlKmean, hc, 3)
+plot_cluster_slice(tlKmean, hc, 4)
+```
+
+

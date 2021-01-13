@@ -1,0 +1,744 @@
+---
+title: "SOA Predictive Analytics Sample Problem"
+
+output: html_notebook
+---
+
+
+DATA EXPLORATION
+
+Load the data and display summary statistics for each variable.
+
+There are two target variables to consider. One is FACE, which is the amount of the death benefit. A value of zero means that no insurance was owned. The other is a derived variable, TERM_FLAG, which was set equal to 1 if FACE is positive and 0 otherwise. 
+
+```{r}
+termLife <- read.csv(file = "TermLife.csv")
+summary(termLife)
+names(termLife)
+
+```
+
+Histograms of the three economic variables, removing cases where the value is 0
+
+```{r}
+library(ggplot2)
+termLife.posface <- termLife[termLife$FACE>0,]
+ggplot(data = termLife.posface) + geom_histogram() + aes(x=FACE)
+ggplot(data = termLife) + geom_histogram() + aes(x=INCOME)
+termLife.poscharity <- termLife[termLife$CHARITY>0,]
+ggplot(data=termLife.poscharity) + geom_histogram() + aes(x=CHARITY)
+
+```
+
+Consider a log transformation. The three plots are arranged to be displayed together in the report.
+
+```{r}
+library(gridExtra)
+p1 <- ggplot(data = termLife.posface) + geom_histogram() + aes(x=log(FACE))
+p2 <- ggplot(data = termLife) + geom_histogram() + aes(x=log(INCOME))
+p3 <- ggplot(data=termLife.poscharity) + geom_histogram() + aes(x=log(CHARITY))
+grid.arrange(p1,p2,p3,ncol=3)
+```
+
+We now want to check for bivariate inconsistencies. The first is to ensure that TERM_FLAG = 0 is associated only with FACE = 0 and TERM_FLAG = 1 is associated only with FACE > 0. This is not stated in the report, given that the chunk shows there are no issues.
+
+```{r}
+max(termLife[termLife$TERM_FLAG==0,]$FACE) == 0  #We hope to see a value of 0 here
+min(termLife[termLife$TERM_FLAG==1,]$FACE) > 0  #We hope to see a positive value here
+
+```
+
+The next chunk examines the three marital status categories. From the data dictionary, those with MARSTAT = 1 or 2 have a spouse or partner, those with 0 do not. For this step we split the data into two groups and then summarize the variables.
+
+```{r}
+#First create two data frames
+termLife.single <- termLife[termLife$MARSTAT==0,]
+termLife.couple <- termLife[termLife$MARSTAT!=0,]
+#Then summarize them
+summary(termLife.single)
+summary(termLife.couple)
+```
+
+The summary indicates no issues for those who are single. The two spouse variables are zero in all cases. For those with status 1 or 2, we see that all have a spouse age. But some have spouse education of zero and some have a household count of 1. The first seems unlikely. The second could be possible in a situation where the spouse lives elsewhere. The next chunk makes two tables to look at this issue in a different way.
+
+
+```{r}
+
+print("MARSTAT vs SEDUCATION")
+table(termLife$MARSTAT,termLife$SEDUCATION)
+print("MARSTAT vs NUMHH")
+table(termLife$MARSTAT,termLife$NUMHH)
+```
+
+We see there are five cases where there is a spouse/partner and no education. We also see some other unusually low values. These will need to be discussed when outliers are looked at. For the number in the household, given there are only four cases and as noted this is conceivable, we will not make any changes at this time.
+
+We now revisit some of the discrete variables to look for outliers. 
+```{r}
+print("EDUCATION")
+table(termLife$EDUCATION)
+print("SEDUCATION")
+table(termLife$SEDUCATION)
+print("NUMHH")
+table(termLife$NUMHH)
+```
+
+As noted, there are a handful with low education levels. We make an arbitrary decision to remove records where the value is 6 or less (but not zero). 
+
+The number in household variable looks reasonable.
+
+The next chunk removes those variables. A new name for the data frame is used.
+
+```{r}
+termLife.new <- termLife[termLife$EDUCATION >6,]
+termLife.new <- termLife.new[termLife.new$SEDUCATION>6 | termLife.new$SEDUCATION==0,]
+
+```
+
+Records with CHARITY >= 1,000,000 will be delted as outliners. The next chunk adds log tranforms of FACE, INCOME, and CHARITY. For FACE and CHARITY, values of 0 are kept at 0 so the transformation does not create errors. 
+
+```{r}
+
+termLife.new <- termLife.new[termLife.new$CHARITY < 1000000,]
+termLife.new$logFACE <- ifelse(termLife.new$FACE==0, 0, log(termLife.new$FACE))
+termLife.new$logINCOME <- log(termLife.new$INCOME)
+termLife.new$logCHARITY <- ifelse(termLife.new$CHARITY==0, 0, log(termLife.new$CHARITY))
+
+```
+
+We reexamine the MARSTAT variable
+
+```{r}
+
+table(termLife.new$MARSTAT)
+```
+
+With so few values equal to 2, those are changed to 1.
+
+```{r}
+
+termLife.new$MARSTAT <- ifelse(termLife.new$MARSTAT == 0, 0, 1)
+table(termLife.new$MARSTAT)
+```
+
+
+FEATURE SELECTION
+
+This chunk creates two new variables
+
+```{r}
+termLife.new$FACEratio <- termLife.new$FACE/termLife.new$INCOME
+termLife.new$AGEdiff <- ifelse(termLife.new$SAGE == 0, 0, abs(termLife.new$AGE - termLife.new$SAGE))
+
+```
+
+Finally, save the two files, one for each target variable
+
+```{r}
+write.csv(termLife.new, file = "termLifeFLAG.csv")
+termLifeFACE <- termLife.new[termLife.new$FACE>0,]
+write.csv(termLifeFACE, file = "termLifeFACE.csv")
+
+```
+
+Note: Additional feature exploration using PCA and clustering is done at the end.
+
+MODEL FOR TERM_FLAG
+
+Clear the environment, load the dataset for this variable and summarize the variables.
+
+```{r}
+rm(list=ls())
+tlFLAG <- read.csv(file = "termLifeFLAG.csv")
+summary(tlFLAG)
+names(tlFLAG)
+```
+
+Remove variables that will not be used (the first is just the row numbers, numbers 2, 11, and 12 are replaced by log and 13 and 16 are related to FACE, which cannot be used to predict who will buy insurance)
+
+```{r}
+
+tlFLAG <- tlFLAG[,-c(1, 2, 11, 12, 13, 16)]
+names(tlFLAG)
+```
+
+Set up training and validation sets.
+
+```{r}
+# NOTE caret createDataPartition automatically stratifies samples
+library(caret)
+set.seed(1000)
+training.indices <- createDataPartition(tlFLAG$TERM_FLAG, p = 0.8, list = FALSE)
+tlFLAG.t <- tlFLAG[training.indices, ] 
+tlFLAG.v <- tlFLAG[-training.indices, ]
+rm(training.indices)
+
+```
+
+Ceate an initial tree
+
+----
+Description
+Fit a rpart model
+
+Usage
+rpart(formula, data, weights, subset, na.action = na.rpart, method,
+model = FALSE, x = FALSE, y = TRUE, parms, control, cost, ...)
+
+Arguments
+method 
+one of "anova", "poisson", "class" or "exp". If method is missing then
+the routine tries to make an intelligent guess. If y is a survival object, then
+method = "exp" is assumed, if y has 2 columns then method = "poisson"
+is assumed, if y is a factor then method = "class" is assumed, otherwise
+method = "anova" is assumed. It is wisest to specify the method directly,
+especially as more criteria may added to the function in future.
+Alternatively, method can be a list of functions named init, split and eval.
+Examples are given in the file ‘tests/usersplits.R’ in the sources, and in the
+vignettes ‘User Written Split Functions’.
+
+parms
+optional parameters for the splitting function.
+Anova splitting has no parameters. 
+Poisson splitting has a single parameter, the coefficient of variation of the prior
+distribution on the rates. The default value is 1.
+Exponential splitting has the same parameter as Poisson.
+
+For classification splitting, the list can contain any of: the vector of prior probabilities
+(component prior), the loss matrix (component loss) or the splitting
+index (component split). The priors must be positive and sum to 1. The loss
+matrix must have zeros on the diagonal and positive off-diagonal elements. The
+splitting index can be gini or information. The default priors are proportional
+to the data counts, the losses default to 1, and the split defaults to gini.
+---
+
+```{r}
+library(rpart)  #Recursive Partitioning and Regression Trees
+set.seed(1234)
+
+#Set the parameters to get a fairly complex tree. A node can have has few as 5 observations, the default complexity parameter is used, and the tree can be 7 levels deep.
+tree1 <- rpart(TERM_FLAG~., 
+               data = tlFLAG.t, 
+               method = "class",
+               control = rpart.control(minbucket = 5, cp = 0.01, maxdepth = 7),
+               parms = list(split = "gini"))
+
+tree1
+```
+
+Obtain the confusion matrix against the training and validation sets.
+
+```{r}
+pred <- predict(tree1, type = "class")
+
+confusionMatrix(pred, factor(tlFLAG.t$TERM_FLAG)) 
+
+pred.v <- predict(tree1, type = "class", newdata = tlFLAG.v)
+
+confusionMatrix(pred.v, factor(tlFLAG.v$TERM_FLAG))
+
+```
+
+This chunk prune the tree using the optimal complexity parameter and computes the confusion matrices.
+
+ 
+```{r}
+library(rpart.plot)
+tree2 <- prune(tree1, cp = tree1$cptable[which.min(tree1$cptable[, "xerror"]), "CP"])
+
+rpart.plot(tree2)
+
+pred2 <- predict(tree2, type = "class")
+
+confusionMatrix(pred2, factor(tlFLAG.t$TERM_FLAG))
+
+pred.v2 <- predict(tree2, type = "class", newdata = tlFLAG.v)
+
+confusionMatrix(pred.v2, factor(tlFLAG.v$TERM_FLAG))
+
+```  
+
+This chunk selects the complexity parameter using cross validation.
+
+```{r}
+set.seed(6)
+Grid <- expand.grid(cp=seq(0, 0.2, 0.001))
+fitControl <- trainControl(method = "cv", number = 6)
+tree3 <- train(factor(TERM_FLAG)~.,
+                data=tlFLAG.t,
+                method='rpart',
+                trControl = fitControl,
+                metric = "Accuracy",
+                tuneGrid = Grid,
+                na.action = na.omit,
+                parms=list(split='Gini'))
+
+tree3$finalModel 
+
+plot(tree3)
+rpart.plot(tree3$finalModel, extra=4)
+
+pred3 <- predict(tree3, type = "raw")
+
+confusionMatrix(pred3, factor(tlFLAG.t$TERM_FLAG))
+
+pred.v3 <- predict(tree3, type = "raw", newdata = tlFLAG.v)
+
+confusionMatrix(pred.v3, factor(tlFLAG.v$TERM_FLAG))
+
+```
+
+This chunk uses caret to tune the mtry parameter for a random forest model and learn about variable importance.
+
+```{r}
+set.seed(42)
+#Set up the grid.
+rfGrid <- expand.grid(mtry = c(1:7)) 
+
+#Set the controls
+ctrl <- trainControl(method = "repeatedcv", 
+                     number = 5, 
+                     repeats = 3) 
+
+#Train the model
+rf2 <- train(factor(TERM_FLAG) ~.,
+             data = tlFLAG.t,
+             method = "rf", 
+             trControl = ctrl,
+             tuneGrid = rfGrid,
+             ntree = 500, 
+             nodesize = 5,
+             importance = TRUE
+            )
+
+#View the output
+rf2
+ggplot(rf2)
+
+#Obtain the confusion matrices
+pred2 <- predict(rf2, tlFLAG.t)
+
+confusionMatrix(pred2, factor(tlFLAG.t$TERM_FLAG))
+
+pred2.v <- predict(rf2, newdata = tlFLAG.v)
+
+confusionMatrix(pred2.v, factor(tlFLAG.v$TERM_FLAG)) 
+
+#Obtain the importance of the features
+varImp(rf2)
+                     
+```
+
+The final model fits a pruned tree to the full dataset.
+
+```{r}
+
+set.seed(1234)
+
+tree.full <- rpart(TERM_FLAG~., 
+                   data = tlFLAG, 
+                   method = "class",
+                   control = rpart.control(minbucket = 5, cp = 0.005, maxdepth = 7), 
+                   parms = list(split = "gini"))
+
+tree.full2 <- prune(tree.full, cp = tree.full$cptable[which.min(tree.full$cptable[, "xerror"]), "CP"])
+
+rpart.plot(tree.full2, type = 5, tweak = 1.5, box.palette = 0, extra = 100, under = TRUE)
+
+pred.full2 <- predict(tree.full2, type = "class")
+
+confusionMatrix(pred.full2, factor(tlFLAG$TERM_FLAG))
+
+
+```
+
+MODEL FOR FACE
+
+Clear the workspace, load the data, summarize it, and remove variables that will not be needed.
+
+```{r}
+rm(list=ls())
+tlFACE <- read.csv(file = "termLifeFACE.csv")
+summary(tlFACE)
+names(tlFACE)
+```
+
+```{r}
+tlFACE <- tlFACE[,-c(1,3,11,12)]
+names(tlFACE)
+
+```
+
+Set up training and validation sets.
+
+```{r}
+library(caret)
+set.seed(1000)
+training.indices <- createDataPartition(tlFACE$FACE, p = 0.8, list = FALSE)
+tlFACE.t <- tlFACE[training.indices, ] 
+tlFACE.v <- tlFACE[-training.indices, ]
+rm(training.indices)
+
+```
+
+Set up three regression formulas, one for each target variable.
+
+```{r}
+f.logFACE <- as.formula(
+  "logFACE  ~GENDER+AGE+MARSTAT+EDUCATION+SAGE+SEDUCATION+NUMHH+logINCOME+logCHARITY+AGEdiff")
+
+f.FACE <- as.formula(
+  "FACE     ~GENDER+AGE+MARSTAT+EDUCATION+SAGE+SEDUCATION+NUMHH+logINCOME+logCHARITY+AGEdiff")
+
+f.FACEratio <- as.formula(
+  "FACEratio~GENDER+AGE+MARSTAT+EDUCATION+SAGE+SEDUCATION+NUMHH+logINCOME+logCHARITY+AGEdiff")
+
+```
+
+Run a GLM with the normal distribution and identity link to predict logFACE. 
+
+```{r}
+normal.logFACE <- glm(f.logFACE, data=tlFACE.t)
+summary(normal.logFACE)
+
+```
+
+Backward selection using AIC is employed to remove variables.
+
+```{r}
+library(MASS)  #Description Functions and datasets to support Venables and Ripley, ``Modern Applied Statistics with S'' (4th edition, 2002).
+stepAIC(normal.logFACE, direction = "backward")
+
+```
+
+one complication when fitting a regreesion model, that was not present when using trees, is the relationship between marital status (MARSTAT) and any feature, such as spouse age, that is zero when MARSTAT = 0. If the spouse feature is retained but MARSTAT dropped, the difference between 0 and 1 will be the same as between 1 and 2, yet 0 has special meaning. Hence, if any of those variables are retained, MARSTAT should also be retained.
+
+From the above discussion, because AGEdiff is retained we should keep MARSTAT.
+
+---
+The next chunk reruns the model with two variables removed.
+
+```{r}
+f.logFACE2 <- as.formula("logFACE~GENDER+AGE+MARSTAT+EDUCATION+NUMHH+logINCOME+logCHARITY+AGEdiff ")
+normal.logFACE2 <- glm(f.logFACE2, data=tlFACE.t)
+summary(normal.logFACE2)
+
+```
+
+The next chunk calculates the RMSE using this model.
+
+```{r}
+#Get the exponentiated predicted values for the validation set.
+exp.pred <- exp(predict(normal.logFACE2, newdata = tlFACE.v))
+
+#Calcuate the root mean squared error
+rmse <- sqrt(sum((exp.pred - tlFACE.v$FACE)^2)/nrow(tlFACE.v))
+
+rmse
+
+```
+
+This chunk tries a gamma model and log link to predict FACE. The original run did not converage. This one increases the iterations to 500 and there still is no convergence.
+
+```{r}
+gamma.FACE <- glm(f.FACE, data=tlFACE.t, family = Gamma(link="log"), maxit = 500)
+summary(gamma.FACE)
+
+```
+
+Given that the output shows that SAGE and SEDUCATION are still not very predictive, maybe dropping them will help. That is tried in the next chunk.
+
+```{r}
+#CHUNK 13
+f.FACE2 <- as.formula("FACE~GENDER+AGE+MARSTAT+EDUCATION+NUMHH+logINCOME+logCHARITY+AGEdiff ")
+gamma.FACE2 <- glm(f.FACE2, data=tlFACE.t, family = Gamma(link="log"))
+summary(gamma.FACE2)
+
+```
+
+
+```{r}
+stepAIC(gamma.FACE2, direction = "backward")
+
+```
+
+When stepAIC or drop1 is tried there is an error "cannot correct step size." This means after removing one of the variables the algorithm again does not converage. So instead, remove the variable with the highest p-value and try again. As before, we don't want to remove MARSTAT, so AGE is removed.
+
+```{r}
+f.FACE3 <- as.formula("FACE~GENDER+MARSTAT+EDUCATION+NUMHH+logINCOME+logCHARITY+AGEdiff ")
+gamma.FACE3 <- glm(f.FACE3, data=tlFACE.t, family = Gamma(link="log"))
+summary(gamma.FACE3)
+
+```
+
+There is still no convergence, so we accept the current model calculate the RMSE.
+
+```{r}
+#Get the predicted values for the validation set.
+pred <- predict(gamma.FACE2, newdata = tlFACE.v)
+
+#Calcuate the root mean squared error
+rmse <- sqrt(sum((pred - tlFACE.v$FACE)^2)/nrow(tlFACE.v))
+
+rmse
+
+```
+
+Modeling FACEratio with a gamma distribution and log link has the same issues. The following chunk fits the model with two variables removed.
+
+```{r}
+gamma.FACEratio <- glm(f.FACEratio, data=tlFACE.t, family = Gamma(link="log"), maxit = 500)
+summary(gamma.FACEratio)
+
+```
+
+SAGE and SEDUCATION are removed.
+
+```{r}
+f.FACEratio2 <- as.formula("FACEratio~GENDER+AGE+MARSTAT+EDUCATION+NUMHH+logINCOME+logCHARITY+AGEdiff ")
+gamma.FACEratio2 <- glm(f.FACEratio2, data=tlFACE.t, family = Gamma(link="log"))
+summary(gamma.FACEratio2)
+
+#Get the predicted values for the validation set. 
+#For a legitimate comparison, the predicted ratios must be muliplied by INCOME.
+pred <- predict(gamma.FACEratio2, newdata = tlFACE.v)*exp(tlFACE.v$logINCOME)
+
+#Calcuate the root mean squared error
+rmse <- sqrt(sum((pred - tlFACE.v$FACE)^2)/nrow(tlFACE.v))
+
+rmse
+
+```
+
+The following chunk employs the lasso to remove variables, using cross validation to select lambda.
+
+```{r}
+library(glmnet)
+
+# Default values are used. 
+# The formula f.logFACE is still available.
+# glmnet requires a model matrix. We begin by setting a seed and creating the model matrix.
+set.seed(42)
+
+X <- model.matrix(f.logFACE, tlFACE.t)
+
+lasso.logFACE <- cv.glmnet(x = X, 
+                           y = log(tlFACE.t$logFACE),
+                           family = "gaussian",
+                           alpha = 1)
+
+```
+
+Now make a plot of the cross-validation and see which variables were selected by the best regression.
+
+```{r}
+plot(lasso.logFACE)
+
+```
+
+This chunk fits the model to the full training set, sees which variables were selected, obtains predicted values for the test set, and then determine the RMSE.
+
+```{r}
+lasso.best <- glmnet(x = X, 
+                     y = log(tlFACE.t$logFACE),
+                     family = "gaussian", 
+                     lambda = lasso.logFACE$lambda.min,
+                     alpha = 1)
+X.test <- model.matrix(f.logFACE, tlFACE.v)
+lasso.best$beta
+
+#make predictions from a "cv.glmnet" object
+#Arguments
+#newx	
+#Matrix of new values for x at which predictions are to be made. Must be a matrix; can be sparse as in Matrix package. See documentation for predict.glmnet.
+lasso.best.predict <- predict(lasso.best, newx=X.test)
+
+rmse <- sqrt(sum((exp(lasso.best.predict) - tlFACE.v$FACE)^2)/nrow(tlFACE.v))
+
+rmse
+
+```
+
+Rerun the selected model against the full dataset and make diagnostic plots.
+
+```{r}
+f.logFACE2 <- as.formula("logFACE~GENDER+AGE+MARSTAT+EDUCATION+NUMHH+logINCOME+logCHARITY+AGEdiff")
+normal.logFACE2.all <- glm(f.logFACE2, data=tlFACE)
+summary(normal.logFACE2.all)
+
+library(ggplot2)
+#quick plot
+qplot(x = normal.logFACE2.all$fitted.values, y = normal.logFACE2.all$residuals)  #residual plot
+#The following diagnostic plots were obtained to ensure that the assumptions were (approximately) met.
+plot(normal.logFACE2.all)
+
+```
+
+
+---
+FURTHER FEATURE SELECTTION
+
+Only prediction of TERM_FLAG is considered here. The first chunks investigate PCA.
+
+This chunk clears the workspace, leads and summarizes the data, and removes variables that will not be used. Note that because we are selecting features here, the target variable is also removed.
+
+```{r}
+
+rm(list=ls())
+tlFLAG <- read.csv(file = "termLifeFLAG.csv")
+summary(tlFLAG)
+names(tlFLAG)
+```
+
+```{r}
+tlPCA <- tlFLAG[,-c(1,2,3,11,12,13,16)]
+names(tlPCA)
+```
+
+This chunk performs PCA on all 10 variables and displays the loadings.
+
+```{r}
+#CHUNK 3
+
+tlPCA.1 <- prcomp(tlPCA, center = TRUE, scale. = TRUE)
+summary(tlPCA.1)
+tlPCA.1$rotation
+```  
+
+PC1 has the same sign for every variable and doesn't seem to provide much insight. PC2 has six variables in one direction and four in the other.
+
+After noting that the key variables used earlier appear in PC2, it was desired to see if PCA can help by combining the six less important variables into a single variable. The following chunk does this and creates a new feature based on the first component.
+
+```{r}
+
+tlPCA.2 <- prcomp(tlPCA[ , c(1,3,5,6,7,10)], center = TRUE, scale. = TRUE)
+summary(tlPCA.2)
+
+#prcomp stores the calculated principal components in "x". Here the first one is attached to the data set as an 11th variable
+
+tlPCA.new <- tlPCA
+tlPCA.new$PC1 <- tlPCA.2$x[,1]
+
+#We now remove the six variables that are being replaced with the single principal component
+
+tlPCA.new <- tlPCA.new[ , c(2,4,8,9,11)]
+
+```
+
+This chunk attaches the target variable and creates a pruned tree using the five predictors. 
+
+```{r}
+#CHUNK 6
+
+tlPCA.new$TERM_FLAG <- tlFLAG$TERM_FLAG
+
+library(rpart)
+library(rpart.plot)
+library(caret)
+set.seed(1234)
+
+tree.PCA <- rpart(TERM_FLAG~., 
+                  data = tlPCA.new, 
+                  method = "class",
+                  control = rpart.control(minbucket = 5, cp = 0.005, maxdepth = 7), 
+                  parms = list(split = "gini"))
+
+tree.PCA2 <- prune(tree.PCA, cp = tree.PCA$cptable[which.min(tree.PCA$cptable[, "xerror"]), "CP"])
+
+rpart.plot(tree.PCA2)
+
+pred.PCA2 <- predict(tree.PCA2, type = "class")
+
+confusionMatrix(pred.PCA2, factor(tlPCA.new$TERM_FLAG))
+
+
+```
+
+The new variable was not used, so there is no reason to consider it further.
+
+Now consider cluster analysis. This chunk prepares the data. Only the two education variables were considered to see if there is a qualitative grouping.
+
+```{r}
+rm(list=ls())
+tlKmean <- read.csv(file = "termLifeFLAG.csv")
+names(tlKmean)
+
+tlKmean <- tlKmean[,c(7,9)]
+names(tlKmean)
+```
+
+K means clustering is now done using one to six clusters.
+
+```{r}
+
+#Note nstart=10. This parameter runs the alogorithm 10 times, with different reandom starting centers each time. The cluster with the highest between sum of squares is selected. The seed is set each time so that we can get the same result if we rerun one of them.
+
+for (i in 1:6)
+{ set.seed(1000)
+  cluster <- kmeans(tlKmean,
+                    centers=i,
+                    nstart=10)
+  r <- cluster$betweenss/cluster$totss
+  print(paste("clusters:",i,"ratio:",r))
+}
+```
+
+The ratio cannot decrease. It appears that after three clusters there is little to gain. That result is now investigated further.
+
+```{r}
+
+library(ggplot2)
+set.seed(1000)
+cluster3 <- kmeans(tlKmean,
+                   centers=3,
+                   nstart=10)
+tlKmean$group <- as.factor(cluster3$cluster)
+
+#This plot uses "geom_count" rather than "geom_point." This is useful for discrete data with multiple observations with the same pair of values. The stat="sum" argument makes theh point size proportional to the number of observations with that pair of values.
+p1 <- ggplot(data = tlKmean, aes(x = EDUCATION, y = SEDUCATION, col = group)) + 
+      geom_count(stat="sum") +
+      ggtitle("k=3")
+p1
+```
+
+It appears the two variables can be combined into a single variable with three levels. One is those with SEDUCATION = 0, the others split the remaining points based on SEDUCATION + EDUCATION being greater than or less than 28.5. The next chunk creates this variable.
+
+```{r}
+#CHUNK 10
+
+tlFLAG <- read.csv(file = "termLifeFLAG.csv")
+tlFLAG <- tlFLAG[,-c(1,2,11,12,13,16)]
+names(tlFLAG)
+tlFLAG$educsum <- tlFLAG$EDUCATION + tlFLAG$SEDUCATION
+tlFLAG$educLevel <- ifelse(tlFLAG$SEDUCATION == 0, "N", ifelse(tlFLAG$educsum < 28.5, "L", "H"))
+tlFLAG <- tlFLAG[ ,-c(5,7,12)]
+names(tlFLAG)
+```
+
+Now fit a tree using this new variable.
+
+```{r}
+#CHUNK 11
+library(rpart)
+library(rpart.plot)
+library(caret)
+set.seed(1234)
+
+tree.full <- rpart(TERM_FLAG~., 
+                   data = tlFLAG, 
+                   method = "class",
+                   control = rpart.control(minbucket = 5, cp = 0.005, maxdepth = 7), 
+                   parms = list(split = "gini"))
+
+tree.full2 <- prune(tree.full, cp = tree.full$cptable[which.min(tree.full$cptable[, "xerror"]), "CP"])
+
+rpart.plot(tree.full2)
+
+pred.full2 <- predict(tree.full2, type = "class")
+
+confusionMatrix(pred.full2, factor(tlFLAG$TERM_FLAG))
+
+
+```
+
+The new variable was not used, so no value was added.
+

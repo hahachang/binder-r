@@ -1,0 +1,218 @@
+---
+title: 'SOA Predictive Analytics Exam, Module 8, Section 1'
+output:
+  html_notebook: default
+---
+
+Run CHUNK 1 to load two libraries and the diamonds dataset as part of Exercise 8.1.1.
+
+```{r}
+# CHUNK 1
+library(ggplot2)
+library(gridExtra)
+diamonds <- read.csv(file="diamonds.csv")
+head(diamonds)
+summary(diamonds)
+```
+
+Run CHUNK 2 as part of Exercise 8.1.1.
+
+```{r}
+# CHUNK 2
+
+#Hints
+# 1. We find the center of the data, which is about (6.5, 4)
+# 2. The line of maximum variance has a gradient of about 1.75
+# 3. Draw the first principal component (red)
+# 4. Second principal component should be orthogonal to the first pc
+# 5. Draw the second principal component (purple)
+
+p1 <- ggplot(diamonds, aes(x = x, y = z)) +
+        geom_point() +
+        xlim(3, 10) +
+        ylim(0, 7.5)
+p1 
+```
+
+Run CHUNK 3 to see the solution.
+
+```{r}
+# CHUNK 3
+# 1. We find the center of the data, which is about (6.5, 4)
+# 2. The line of maximum variance has a gradient of about 1.75
+# 3. Draw the first principal component (red)
+# 4. Second principal component should be orthogonal to the first
+# 5. Draw the second principal component (purple)
+
+p2 <- p1 + geom_segment(aes(x = 6.5, y = 4, xend = 10, yend = 6), color = 'red',
+                        arrow = arrow(length = unit(0.1,"npc")))+
+           ggtitle("1st Principal Component")
+p3 <- p2 + geom_segment(aes(x = 6.5, y = 4, xend = 6.1, yend = 4.7), color = 'purple',
+                        arrow = arrow(length = unit(0.1,"npc")))+
+           ggtitle("1st & 2nd Principal Components")
+grid.arrange(p2, p3, ncol = 2)
+```
+
+Run CHUNK 4 to see a non-orthogonal version.
+  
+```{r}
+#CHUNK 4
+p4 <- p1 + geom_segment(aes(x = 6.5, y = 4, xend = 10, yend = 6), colour = 'red',
+                        arrow = arrow(length = unit(0.1,"npc")))+
+           geom_segment(aes(x = 6.5, y = 4, xend = 10, yend = 6.5), colour = 'purple',
+                        arrow = arrow(length = unit(0.1,"npc")))+
+           ggtitle("1st & 2nd principal Components")
+p4
+```
+
+CHUNK 5 provides some information about variances.
+
+```{r}
+#CHUNK 5
+#Subset the data to be consistent with previous plot
+diamonds.2d.pca <- subset(diamonds[ ,c(8, 10)], x >= 3 & x <= 10 & z > 0 & z <=7.5)
+#Calculate PCA for diamond length and depth
+#Note we center (subtract the sample mean) and scale (divide by the sample standard deviation) the data
+#The function prcomp comes with base R, so no package needs to be loaded
+d.pca.2d <- prcomp(diamonds.2d.pca, center = TRUE, scale. = TRUE)
+summary(d.pca.2d)
+```
+
+Run CHUNK 6 to add more variables.
+
+```{r}
+#CHUNK 6
+#Add more variables to the data
+diamonds.5d.pca <- subset(diamonds[ ,c(5, 7:10)], x >= 3 & x <= 10 & z > 0 & z <=7.5)
+#Calculate PCA
+d.pca.5d <- prcomp(diamonds.5d.pca, center = TRUE, scale. = TRUE)
+summary(d.pca.5d)
+```  
+
+Run CHUNK 7 to diplay the loadings.
+
+```{r}
+#CHUNK 7
+d.pca.5d$rotation
+```    
+
+Run CHUNK 8 to compare centering versus scaling.
+
+```{r}
+#CHUNK 8
+#Sample diamonds data due to speed of plotting
+set.seed(1000)
+diamonds.sample <- diamonds[sample(1:nrow(diamonds), 5000), ]
+diamonds.3d.sample <- subset(diamonds.sample[ ,c(8:10)], x >= 3 & x <= 10 & z > 0 & z <=7.5)
+diamonds.5d.sample <- subset(diamonds.sample[ ,c(5, 7:10)], x >= 3 & x <= 10 & z > 0 & z <=7.5)
+
+#Compute PCA for the two samples, one scaled and one without
+d.3d.scale <- prcomp(diamonds.3d.sample , center = TRUE, scale. = TRUE)
+d.3d.noscale <- prcomp(diamonds.3d.sample , center = TRUE, scale. = FALSE)
+d.5d.scale <- prcomp(diamonds.5d.sample , center = TRUE, scale. = TRUE)
+d.5d.noscale <- prcomp(diamonds.5d.sample , center = TRUE, scale. = FALSE)
+
+#Plot the four graphs
+par(mfrow = c(1, 2))
+p1 <- biplot(d.3d.scale , scale = 0) #main = "3D Scaled"
+p2 <- biplot(d.3d.noscale , scale = 0) #main = "3D No Scale"
+p3 <- biplot(d.5d.scale , scale = 0) #main = "5D Scaled"
+p4 <- biplot(d.5d.noscale , scale = 0)  #main = "5D No Scale"
+```
+  
+Run CHUNK 9 to see more about the three variable PCA.
+
+```{r}
+#CHUNK 9
+#What do you see?
+summary(d.3d.scale)
+d.3d.scale$rotation
+summary(d.3d.noscale)
+d.3d.noscale$rotation
+```
+
+Run CHUNK 10 to see the results for the five variable problem.
+
+```{r}
+#CHUNK 10
+#What do we see here?
+ # The output of unscaled PCA doesn't make much sense as price dominated all the variance
+summary(d.5d.scale)
+d.5d.scale$rotation
+summary(d.5d.noscale)
+d.5d.noscale$rotation
+```
+ 
+ Use CHUNKS 11-13 to further intepret the dimensionality of the diamonds data.
+
+```{r}
+#CHUNK 11
+# Continue with the diamonds.sample data (5000 obs). Binarize all categorical variables
+summary(diamonds.sample)
+
+```
+
+```{r}
+#CHUNK 12
+# Conduct PCA using all variables except for price and make a simple plot. You might like to try the biplot() and screeplot() functions.
+  # Do you know why we leave the price out?
+
+```
+
+```{r}
+#CHUNK 13
+# Combine the plot with other PCA outputs (summary, rotations etc). What are some of your observations?
+# Note - interpretation of the principal components is based on finding which variables are most strongly correlated with each component. 
+# In other words, we need to find which numbers are large among all the coefficients.
+
+```
+
+Examine CHUNKS 14-16 to see a possible solution.
+
+```{r}
+#CHUNK 14
+library(caret)
+
+# Binarize all categorical variables
+# dummyVars is not compatible with factors
+diamonds$color <- as.character(diamonds$color)
+diamonds$cut <- as.character(diamonds$cut)
+diamonds$clarity <- as.character(diamonds$clarity)
+# Binarize variables
+binarizer <- dummyVars('~ cut + clarity + color', data = diamonds, fullRank= F)
+diamonds_spread <- data.frame(predict(binarizer, newdata = diamonds))
+
+# Remove price
+diamonds_spread <- diamonds_spread[, setdiff(colnames(diamonds_spread), c("price"))]
+
+# Quick view
+head(diamonds_spread)
+```
+
+
+```{r}
+#CHUNK 15
+# Conduct PCA using all variables except for the price and make a simple plot  
+  # Do you know why we leave the price out?
+    # PCA is an unsupervised technique. If we are to use the PCs later on in a model, the target cannot be included in the analysis. 
+d.pca <- prcomp(diamonds_spread, center = TRUE, scale. = TRUE)
+par(mfrow = c(1, 2))
+biplot(d.pca)
+screeplot(d.pca, npcs = 26, type = 'lines')
+```
+
+
+```{r}
+#CHUNK 16
+# Combine the plot with other PCA outputs. What are some of your observations? 
+  # In summary, the first 15 PCs explain about 91% of the variance, that's a reasonable number. You would expect to use few PCs to capture majority of the variance. 
+  # We want to find the factors driving each PC. One way we can do this is to rank or order coefficients within each PC and make an observation, e.g. try head(t[rev(order(abs(d.pca.loadings$PC1))),], 5)
+    
+summary(d.pca)
+d.pca$rotation
+```
+
+In this example, the first principal component is a measure of "size" where x, y, z and carat are the dominating variables. These four coefficients are negative, so as one decreases, the others decrease as well. Pay attention to the positive values for Ideal, VVS1, VVS2 and IF. They are a measure of "high quality", though not as strong. "High quality" is negatively correlated with "size".
+ 
+
+
