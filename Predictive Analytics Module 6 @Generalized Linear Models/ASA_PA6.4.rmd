@@ -1,0 +1,137 @@
+---
+title: "Predictive Analtyics Exam Module 6 Section 4"
+output: html_notebook
+---
+CHUNK 1 loads some data and makes a plot.
+
+```{r}
+#CHUNK 1
+
+library(ggplot2)
+# Read in some data
+intDatf <- read.csv(file = "interactionData.csv")
+
+# If we plot the log of the response variable (actual), we can see that relationship between
+#   age and the response is different for males and females
+ggplot(intDatf, aes(x = age, y = log(actual), color = gender)) + geom_line()
+
+```
+
+Run CHUNK 2 to fit a linear model without interaction.
+
+```{r}
+#CHUNK 2
+glm.main.only <- glm('actual ~ gender + age', intDatf, family = Gamma(link = 'log'))
+
+# The parameter estimates are significant. This will be further discussed later in the module. For now just note that all variables are highly sigficant (p-values extremely small).
+summary(glm.main.only)
+
+# First, we add the predctions to the data
+intDatf$pred_main_only <- predict(glm.main.only, intDatf, type = 'response')
+
+# Then we compare the predictions from our main effects only model to the actuals
+# These lines are parallel because the influence of age (ie the slope) is independent
+#   of gender.  Clearly, this differs from the actual relationships.
+ggplot(intDatf) +
+    geom_line(aes(x = age, y = log(pred_main_only), color = gender)) +
+    geom_line(linetype = 2, aes(x = age, y = log(actual), color = gender))
+```
+
+Now run CHUNK 3 to fit a model with interaction.
+
+```{r}
+#CHUNK 3
+#Note than when specifiying the interaction term gender*age, the model automatically includes gender and age as main effects
+glm.interact <- glm('actual ~ gender*age', intDatf, family = Gamma(link = 'log'))
+
+#The summary shows that the gender:age interaction is signficant.
+summary(glm.interact)
+
+# Or calculate the change in AIC between the two models (with and without the interaction). This again indicates the interactions has improved the model (more on AIC later).
+AIC(glm.interact) - AIC(glm.main.only)
+
+# Now we can see the slope adjustment introduced by the interaction term
+intDatf$pred_interact <- predict(glm.interact, intDatf, type = 'response')
+
+ggplot(intDatf) +
+    geom_line(aes(x = age, y = log(pred_interact), color = gender)) +
+    geom_line(linetype = 2, aes(x = age, y = log(actual), color = gender))
+```
+
+CHUN 4 loads the Insurance data and displays the first few values.
+
+```{r}
+# CHUNK 4
+
+Insurance <- read.csv("Insurance.csv")
+head(Insurance)
+
+#We see that District is an integer variable, but we want to treat it as a factor.
+Insurance$District <- as.factor(Insurance$District)
+head(Insurance)
+```
+
+CHUNK 5 fits Poisson glms with and without offsets.
+
+```{r}
+# CHUNK 5
+
+mod1 <- glm(Claims ~ District + Group + Age, 
+            data = Insurance,
+            family = poisson)
+mod1$coefficients
+pred1 <- predict(mod1,type="response")
+
+#Note how an offset is treated as another predictor. Also, because it is treated as a variable, the logarithm should be used as the offset.
+mod2 <- glm(Claims ~ District + Group + Age + offset(log(Holders)), 
+            data = Insurance, 
+            family = poisson)
+mod2$coefficients
+pred2 <- predict(mod2,type="response")
+
+sse1 <- sum((Insurance$Claims - pred1)^2)
+sse2 <- sum((Insurance$Claims - pred2)^2)
+
+sse1
+sse2
+
+#As expected, the offset improves the quality of the fit.
+```
+
+CHUNK 6 fits several more models to illustate the use of weights
+
+```{r}
+# CHUNK 6
+mod3 <- glm(Claims ~ District + Group + Age, 
+            data = Insurance,
+            family = gaussian)
+mod1$coefficients
+pred3 <- predict(mod3,type="response")
+
+Insurance$AvgClaims <- Insurance$Claims/Insurance$Holders
+
+mod4 <- glm(AvgClaims ~ District + Group + Age, 
+            data = Insurance, 
+            family = gaussian)
+mod4$coefficients
+pred4 <- predict(mod4,type="response")
+
+mod5 <- glm(AvgClaims ~ District + Group + Age, 
+            data = Insurance, 
+            weights = Holders, 
+            family = gaussian)
+mod5$coefficients
+pred5 <- predict(mod5,type="response")
+
+sse3 <- sum((Insurance$Claims - pred3)^2)
+sse4 <- sum((Insurance$Claims - Insurance$Holders*pred4)^2)
+sse5 <- sum((Insurance$Claims - Insurance$Holders*pred5)^2)
+
+sse3
+sse4
+sse5
+
+#Only the third of these is a proper treatment and clearly does the best, but it is not as good as the Poisson model.
+```
+
+ 

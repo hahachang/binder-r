@@ -1,0 +1,166 @@
+---
+title: "Predictive Analtyics Exam Module 6 Section 1"
+output:
+  html_document:
+    df_print: paged
+---
+
+Run CHUNK 1 to load some pacakges.
+
+```{r setup, echo = FALSE, warning = FALSE, message = FALSE}
+#CHUNK 1
+library(ggplot2)
+library(gridExtra)
+
+```
+
+Run CHUNK 2 to load and plot the Galton data.
+
+```{r Answer - galton plot}
+#CHUNK 2
+galton <- read.csv("galton.csv")
+set.seed(1000)
+
+head(galton)
+ggplot(galton, aes(x = jitter(parent, 5), y = jitter(child, 5))) +
+  geom_point() +
+  labs(x = "Parents' Height", y = "Child's Height")
+```
+
+Run CHUNK 3 to plot the regression line.
+
+```{r}
+#CHUNK 3
+set.seed(1000)
+ggplot(galton, aes(x = jitter(parent, 5), y = jitter(child, 5))) +
+  geom_point() +
+  labs(x = "Parents' Height", y = "Child's Height") +
+  stat_smooth(method="lm", col = "red")
+
+```
+
+Run CHUNK 4 to formally fit the line.
+
+```{r model_summary}
+#CHUNK 4
+lm_galton <- lm(child ~ parent, data = galton)
+summary(lm_galton)
+```
+  
+Use CHUNK 5 to work on Exercise 6.1.1
+
+```{r Answer 6.7.1}
+#CHUNK 5
+
+```
+
+CHUNK 6 has a solution.
+
+```{r}
+#CHUNK 6
+b0 <- coef(lm_galton)[1]
+b1 <- coef(lm_galton)[2]
+x <- 68
+
+# Manual calculation of child height
+yhat <- b0 + b1*x
+print(yhat)
+
+# Using predict function
+yhat2 <- predict(lm_galton, newdata = data.frame(parent = 68))
+print(yhat2)
+```
+
+Run CHUNK 7 to load and set up the auto claim dataset.
+
+```{r}
+#CHUNK 7
+
+AutoClaim <- read.csv("AutoClaim.csv")
+
+# We will only use GENDER, AGE, BLUEBOOK, and CLM_AMT for demonstration
+AutoClaim_sub <- subset(AutoClaim, select = c('GENDER','AGE','BLUEBOOK','CLM_AMT'))
+head(AutoClaim_sub)
+# Create age bands and then remove age
+AutoClaim_sub$AGE_BAND <- cut(x = AutoClaim_sub$AGE, breaks = c(0,25,35,45,55,65,85))
+AutoClaim_sub$AGE <- NULL
+# Select only cases where CLM_AMT is positive
+AutoClaim_sub <- AutoClaim_sub[AutoClaim$CLM_AMT > 0,]
+
+head(AutoClaim_sub)
+```
+
+Run CHUNK 8 to set up and view part of the model matrix.
+
+```{r}
+MM <- model.matrix(CLM_AMT ~ GENDER + AGE_BAND + BLUEBOOK, data = AutoClaim_sub)
+MM[1:6,]
+```
+
+Run CHUNK 9 to obtain the parameter estimates by matrix algebra.
+
+```{r}
+#CHUNK 9
+X <- MM
+Y <- AutoClaim_sub$CLM_AMT
+
+#R does not have a matrix inverse function, but solve() performs this task.
+Beta <- solve(t(X)%*%X) %*% (t(X)%*%Y)
+Beta
+```
+
+Run CHUNK 10 to obtain the least squares estimates.
+
+```{r lm_model}
+linear.model <- lm(CLM_AMT ~ GENDER + AGE_BAND + BLUEBOOK, data = AutoClaim_sub)
+linear.model
+```
+
+Run CHUNK 11 to see a visualiztion of the difference how conditional normal distributions does not imply an aggregate normal distribution.
+
+```{r warning=FALSE, message=FALSE}
+#CHUNK 10
+set.seed(42)
+
+f <- rnorm(n = 500, mean = 1500, sd = 400)
+m <- rnorm(n = 500, mean = 3000, sd = 400)
+gend <- data.frame(CLM_AMT = f, GENDER = 'F')
+gend <- rbind(gend, data.frame(CLM_AMT = m, GENDER = 'M'))
+
+p1 <- ggplot(gend, aes(x=CLM_AMT)) + 
+        geom_freqpoly(position="identity", col = 'black') + 
+        ggtitle(label = "Overall distribution of CLM_AMT")
+
+p2 <- ggplot(gend, aes(x=CLM_AMT, fill=GENDER)) + 
+        geom_freqpoly(position="identity", col = 'black') + 
+        ggtitle(label = "CLM_AMT distribution by GENDER")
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+Use CHUNK 12 to test the assumptions of ordinary least squares for Exercise 6.1.2.
+
+```{r}
+#CHUNK 12
+
+#run the regression
+model <- lm(CLM_AMT ~ GENDER + AGE_BAND + BLUEBOOK, data = AutoClaim_sub)
+
+#Check the mean of the residuals
+mean(model$residuals) 
+
+#Check the residuals for constant variance. Not all four plots relate to this assumption.
+par(mfrow=c(2,2))
+plot(model)
+
+#Check that the residuals and the predictor variables are uncorrelated
+cor.test(AutoClaim_sub$BLUEBOOK, model$residuals) # Run this for each your predictor variables
+
+#Check that the residuals have a normal distribution
+#One check is a Q-Q plot, which appears in the upper right corner of the plots made when checking for constant variance. Another option is to make a histogram of the residuals.
+resid <- data.frame(model$residuals)
+ggplot(resid, aes(x=model.residuals)) + 
+        geom_histogram(bins=100, position="identity", col = 'black')
+
+```
+

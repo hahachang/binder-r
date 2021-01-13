@@ -1,0 +1,183 @@
+---
+title: "Predictive Analtyics Exam Module 6 Section 3"
+output: html_notebook
+---
+
+CHUNK 1A. Consider a simple example of an exponential curve in two dimensional space.
+
+```{r echo=FALSE}
+#CHUNK 1A
+library(ggplot2)
+x1 <- runif(100, 1,10)
+x2 <- exp(x1)
+df <- data.frame(x1 = x1, x2 = x2)
+
+p1 <- ggplot(data = df, aes(x = x1, y = x2)) + geom_point()
+p1
+```
+
+CHUNK 1B checks out a log transform.
+
+```{r echo = FALSE}
+#CHUNK 1B
+df$logx2 <- log(df$x2)
+p1 <- ggplot(data = df, aes(x = x1, y = logx2)) + geom_point()
+p1
+```
+
+CHUNK 2 provides an example of simple classification problem.
+
+```{r echo = FALSE}
+#CHUNK 2
+df <- data.frame(x1 = c(1,2,1.5,3,3.5,3.5),
+                 x2 = c(2,1.5,3,3,3.5,3.9),
+                 class = c("A", "A", "A", "B", "B", "B"))
+
+p1 <- ggplot(data = df, aes(x = x1, y = x2, color = class)) +
+      geom_point(size = 5) +
+      scale_x_continuous(limits = c(0.5,4)) +
+      scale_y_continuous(limits = c(0.5,4)) +
+      annotate("segment", x = 1.5, xend = 3.5, y = 4, yend = 1, size = 2)
+p1
+
+```
+
+Run CHUNK 3 to see the data for a more complex classification problem. You will note that the formula for separating A and B makes it clear that a circle is the best divider. But you wouldn't know that if you only had the data and some noise had been added.
+
+```{r echo = FALSE}
+#CHUNK 3
+x1 <- runif(1000,-1,1)
+x2 <- runif(1000,-1,1)
+class <- ifelse(sqrt(x1^2 +x2^2) < 0.5, "A","B")
+
+df <- data.frame(x1 = x1, x2 = x2, class = class)
+
+p1 <- ggplot(data = df, aes(x = x1, y = x2, color = class)) +
+      geom_point() 
+p1
+```
+
+Run CHUNK 4 to see the value of a feature for this problem.
+
+```{r echo = FALSE}
+#CHUNK 4
+df$dist_from_0 <- sqrt(df$x1^2 + df$x2^2)
+      
+p2 <- ggplot(data = df, aes(x = 0, y = dist_from_0, color = class)) +
+      geom_point(position = "jitter") +
+      theme(axis.title.x=element_blank(),
+                axis.text.x=element_blank(),
+                axis.ticks.x=element_blank()) +
+      annotate("segment", x = -0.5, xend = 0.5, y = 0.5, yend = 0.5)
+
+p2
+
+
+```
+
+CHUNK 5 has a trivial example of a feature being equal to an input variable.
+
+```{r echo = FALSE} 
+#CHUNK 5
+df <- data.frame(variable_Income = c(100000, 130000, 95000), feature_Income = c(100000, 130000, 95000))
+df
+```
+
+CHUNK 6 provides an example of creating more than one feature from a single variable.
+
+```{r echo = FALSE}
+#CHUNK 6
+df <- data.frame(variable_occupation = c("Pediatric Nurse", "Neurosurgeon", "Carpenter"),
+                 feature_occupation_medical = c("TRUE", "TRUE", "FALSE"),
+                 feature_occupation_labor = c("FALSE", "FALSE", "TRUE"))
+df
+```
+   
+CHUNK 7 provides an example of combining multiple variables into a single factor.
+    
+```{r}
+#CHUNK 7
+df <- data.frame(variable_sex = c("Female", "Male", "Male"),
+                 variable_smoker = c("Non-Smoker", "Non-Smoker", "Smoker"),
+                 feature_sex_smoker = c("Female Non-Smoker", "Male Non-Smoker", "Male Smoker"))
+df
+```
+
+CHUNK 8 reads in the mortality data, creates a target variable and summarizes the data.
+
+```{r}
+#CHUNK 8
+data.mortality <- read.csv("soa_mortality_data.csv")
+data.mortality$actual_q <- data.mortality$actual_face / data.mortality$exposure_face
+data.mortality <- subset(data.mortality, exposure_face > 0)
+nrow(data.mortality)
+summary(data.mortality)
+```
+
+CHUNK 9 has some suggested transformations. Consider adding others as you develop potential features for this dataset.
+
+```{r}
+#CHUNK 9
+# Log transform example
+data.mortality$duration_log <- log(data.mortality$duration)
+
+# Normalization example
+
+data.mortality$issage_norm <- (data.mortality$issage - min(data.mortality$issage)) / (max(data.mortality$issage - min(data.mortality$issage)))
+
+# Binned versions of variables example
+
+data.mortality$issage_bin10 <- cut(data.mortality$issage, 10)
+data.mortality$issage_bin20L <- cut(data.mortality$issage, 20)
+data.mortality$issage_bin20 <- cut(data.mortality$issage, 20, labels = FALSE) # Note the difference between using labels or not
+
+head(data.mortality, 20)
+```
+
+CHUNK 10 provides space to binarize the categorical variables.
+
+```{r}
+#CHUNK 10
+
+
+```
+
+CHUNK 11 provides a sample binarization using the caret library.
+
+```{r}
+#CHUNK 11
+library(caret)
+
+# List the variables we want to binarize
+vars.bin <- c("sex", "smoker", "prodcat", "region", "distchan", "uwkey", "uwtype", "resind_ind")
+
+# dummyVars is not compatible with factors
+for (var in vars.bin) {
+  data.mortality[, var] <- as.character(data.mortality[, var])
+}
+
+# Binarize variables
+# The paste function makes it easy to create the formula, it could have been typed out.
+# fullRank = F implies that all values get coded. For example, for sex, both M and F will be in the binarized dataset. 
+binarizer <- dummyVars(paste("~", paste(vars.bin, collapse = "+")), 
+                              data = data.mortality, fullRank = F)
+data.mortality <- cbind(data.mortality,
+                        data.frame(predict(binarizer, newdata = data.mortality)))
+```
+
+CHUNK 12 creates two compound variables.
+  
+```{r}
+#CHUNK 12
+data.mortality$smoker_sex <- paste(data.mortality$smoker, data.mortality$sex, sep = "_")
+data.mortality$smoker_sex_uwtype <- paste(data.mortality$smoker, data.mortality$sex, data.mortality$uwtype, sep = "_")
+
+head(data.mortality)
+
+```
+
+CHUNK 13 clears this large dataset from memory.
+
+```{r}
+rm("data.mortality")
+```

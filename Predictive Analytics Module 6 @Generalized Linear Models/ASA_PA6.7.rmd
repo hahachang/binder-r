@@ -1,0 +1,131 @@
+---
+title: "Predictive Analtyics Exam Module 6 Section 7"
+output: html_notebook
+---
+
+Run CHUNKS 1-3 to prepare the AutoClaim data for cross-validation.
+
+```{r echo = FALSE}
+#CHUNK 1
+# Load data 
+AutoClaim <- read.csv("AutoClaim.csv")
+
+#Only use cases where the target variable is positive
+data.AC <- AutoClaim[AutoClaim$CLM_AMT5 > 0,]
+names(data.AC)
+
+#Remove variables we will not use as predictors
+data.AC$POLICYNO <- NULL
+data.AC$PLCYDATE <- NULL
+data.AC$CLM_FREQ5 <- NULL
+data.AC$IN_YY <- NULL
+data.AC$CLM_FLAG <- NULL
+data.AC$CLM_AMT <- NULL
+
+summary(data.AC)
+names(data.AC)
+```
+
+The summary indicates that there are missing values (NA) in the data set. CHUNK 2 counts the number of records with at least one missing value and then removes them.
+
+```{r}
+#CHUNK 2
+
+cc <- complete.cases(data.AC)
+sum(cc)
+data.AC <- data.AC[cc,]
+summary(data.AC)
+```
+
+CHUNK 3 usies caret to split the data into training and testing sets.
+
+```{r}
+# CHUNK 3
+
+library(caret)
+set.seed(1000)
+training.indices <- createDataPartition(data.AC$CLM_AMT5, p = 0.8, list = FALSE)
+data.AC.train <- data.AC[training.indices, ] 
+data.AC.test <- data.AC[-training.indices, ]
+
+
+```
+
+Run CHUNK 4 to perform the cross-validation.
+
+```{r}
+#CHUNK 4
+library(glmnet)
+# Fit a Gaussian regression model for the log of the claim amounts. Note that glmnet does not allow for link functions. So this is not the same as GLM to predict claims using exponentiation of the linear predictor (log link).
+
+# Default values are mostly used. Enter ?cv.glment in the Console to see the defaults. 
+set.seed(42)
+f <- as.formula(paste("CLM_AMT5~", paste(colnames(data.AC)[-1], collapse = "+")))
+X <- model.matrix(f, data.AC.train)
+
+m <- cv.glmnet(x = X, 
+               y = log(data.AC.train$CLM_AMT5),
+               family = "gaussian",
+               alpha = 1,
+               nfolds = 10)
+
+```
+
+Run CHUNK 5 to make a plot that relates to the output from running the cross-validation.
+
+```{r}
+#CHUNK 5
+plot(m)
+
+```
+
+Run CHUNK 6 to fit the model to the full training set, obtain predicted values fot the test set, and then determine the mean squared error.
+
+```{r}
+# CHUNK 6
+
+m.best <- glmnet(x = X, 
+                 y = log(data.AC.train$CLM_AMT5),
+                 family = "gaussian", 
+                 lambda = m$lambda.min,
+                 alpha = 1)
+
+X.test <- model.matrix(f, data.AC.test)
+m.best.predict <- predict(m.best, newx = X.test)
+
+mse <- sum((m.best.predict - log(data.AC.test$CLM_AMT5))^2)/nrow(data.AC.test)
+mse
+
+```
+
+Run CHUNK 7 to evaluate five choices for alpha, each time using the best lambda to evaluate the model.
+
+```{r}
+#CHUNK 7
+#Run a for loop to determine lambda for five alpha values
+lambda.best <- NULL
+mse.best <- NULL
+mse.test <- NULL
+for (i in 0:4){
+  alpha <- i/4
+  set.seed(42) #We reset the seed each time so each CV uses the same partitions
+  m <- cv.glmnet(x = X, 
+            y = log(data.AC.train$CLM_AMT5),
+            family = "gaussian",
+            alpha = alpha)
+  m.best <- glmnet(x = X, 
+            y = log(data.AC.train$CLM_AMT5),
+            family = "gaussian", lambda = m$lambda.min,
+            alpha = alpha)
+  m.best.predict <- predict(m.best, newx=X)
+  mse <- sum((m.best.predict - log(data.AC.train$CLM_AMT5))^2)/nrow(data.AC.train)
+  lambda.best <- cbind(lambda.best,m$lambda.min)
+  mse.best <- cbind(mse.best,mse)
+  m.best.predict <- predict(m.best, newx=X.test)
+  mse <- sum((m.best.predict - log(data.AC.test$CLM_AMT5))^2)/nrow(data.AC.test)
+  mse.test <- cbind(mse.test,mse)
+}
+lambda.best
+mse.best
+mse.test
+```

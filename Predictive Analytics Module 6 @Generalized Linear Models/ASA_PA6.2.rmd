@@ -1,0 +1,219 @@
+---
+title: "Predictive Analtyics Exam Module 6 Section 2"
+output: html_notebook
+---
+
+run CHUNK 1 to load the warpbreaks data and obtain mean and variance of the number of breaks by "wool" (which has two types, A and B) and "tension" (which has three levels, L, M, and H).
+
+```{r}
+#CHUNK 1
+
+#This approach usues the dplyr package
+library(dplyr)
+
+warpbreaks <- read.csv("warpbreaks.csv")
+head(warpbreaks)
+
+grp <-  group_by(warpbreaks, wool, tension)
+head(grp)
+
+summarise(grp, Mean_Breaks=mean(breaks), Var_Breaks=var(breaks))
+```
+
+CHUNK 2 fits a Poisson GLM and prints the results.
+
+```{r}
+#CHUNK 2
+model <-glm(breaks ~ wool+tension, 
+            data = warpbreaks, 
+            family = poisson)
+summary(model)
+
+```
+
+CHUNK 3 provides predicted values for the six combinations of wool and tension. They are presented as if they were a new unseen dataset.
+
+```{r}
+#CHUNK 3
+
+wool.new <- c("A","A","A","B","B","B")
+tension.new <- c("L","M","H","L","M","H")
+new.data <- data.frame(wool=wool.new, tension=tension.new)
+
+predictions <- predict(model, newdata=new.data, type="response")
+predictions <- cbind(new.data, predictions)
+predictions
+
+```
+
+CHUNK 4 fits the overdispersed Poisson model and adds the predictions to those made previously.
+
+```{r}
+#CHUNK 4
+model.odp <-glm(breaks ~ wool+tension, 
+                data = warpbreaks, 
+                family = quasipoisson)
+summary(model.odp)
+
+predictions.odp <- predict(model.odp, newdata=new.data, type="response")
+predictions <- cbind(predictions, predictions.odp)
+predictions
+
+```
+
+CHUNK 5 loads the AutoClaim data and prepares the same subset used in the previous section.
+
+```{r}
+#CHUNK 5
+
+AutoClaim <- read.csv("AutoClaim.csv")
+
+# We will only use GENDER, AGE, BLUEBOOK, and CLM_AMT for demonstration
+AutoClaim_sub <- subset(AutoClaim, select = c('GENDER','AGE','BLUEBOOK','CLM_AMT'))
+# Create age bands and then remove age
+AutoClaim_sub$AGE_BAND <- cut(x = AutoClaim_sub$AGE, breaks = c(0,25,35,45,55,65,85))
+AutoClaim_sub$AGE <- NULL
+# Select only cases where CLM_AMT is positive
+AutoClaim_sub <- AutoClaim_sub[AutoClaim$CLM_AMT > 0,]
+
+head(AutoClaim_sub)
+
+```
+
+CHUNK 6A provides space to fit and evaluate three models.
+
+```{r, echo = FALSE}
+#CHUNK 6A
+
+#1
+AutoClaim_sub$logCLM_AMT = log(AutoClaim_sub$CLM_AMT)
+mod1 <- lm(CLM_AMT ~ GENDER + AGE_BAND + BLUEBOOK, data=AutoClaim_sub)
+mod2 <- lm(logCLM_AMT ~ GENDER + AGE_BAND + BLUEBOOK, data = AutoClaim_sub)
+
+#2
+#The first time this is run there is an error message requesting starting values. One source of starting values would be the coefficients  (rounding is fine) from the 
+mod3 <- glm(CLM_AMT ~ GENDER + AGE_BAND + BLUEBOOK, 
+            data=AutoClaim_sub, 
+            family = Gamma(link = "log"))
+  
+#3
+#Note that the lm function only makes predictions for the given model, hence in the second case the predictions must be exponentiated to put them on the scale of the original observations.
+predictions.mod1 <- predict(mod1)
+predictions.mod2 <- predict(mod2)
+predictions.mod3 <- predict(mod3, type = "response")
+sse1 <- sum((AutoClaim_sub$CLM_AMT - predictions.mod1)^2)
+sse2 <- sum((AutoClaim_sub$CLM_AMT - exp(predictions.mod2))^2)
+sse3 <- sum((AutoClaim_sub$CLM_AMT - predictions.mod3)^2)
+
+sse1
+sse2
+sse3
+
+#The first and third models perform similarly whle the second model does slighly less well. Because none of the claim amounts was close to zero, the fact that model 1 allows negative predictions did not affect the results.
+
+
+```
+
+CHUNK 6B, sample solution
+
+```{r, echo = FALSE}
+#CHUNK 6B
+
+#1
+AutoClaim_sub$logCLM_AMT = log(AutoClaim_sub$CLM_AMT)
+mod1 <- lm(CLM_AMT ~ GENDER + AGE_BAND + BLUEBOOK, data=AutoClaim_sub)
+mod2 <- lm(logCLM_AMT ~ GENDER + AGE_BAND + BLUEBOOK, data = AutoClaim_sub)
+
+#2
+#The first time this is run there is an error message requesting starting values. One source of starting values would be the coefficients  (rounding is fine) from the 
+mod3 <- glm(CLM_AMT ~ GENDER + AGE_BAND + BLUEBOOK, data=AutoClaim_sub, family = Gamma(link = "log"))
+
+#3
+#Note that the lm function only makes predictions for the given model, hence in the second case the predictions must be exponentiated to put them on the scale of the original observations.
+predictions.mod1 <- predict(mod1)
+predictions.mod2 <- predict(mod2)
+predictions.mod3 <- predict(mod3, type = "response")
+sse1 <- sum((AutoClaim_sub$CLM_AMT - predictions.mod1)^2)
+sse2 <- sum((AutoClaim_sub$CLM_AMT - exp(predictions.mod2))^2)
+sse3 <- sum((AutoClaim_sub$CLM_AMT - predictions.mod3)^2)
+
+sse1
+sse2
+sse3
+
+#The first and third models perform similarly whle the second model does slighly less well. Because none of the claim amounts was close to zero, the fact that model 1 allows negative predictions did not affect the results.
+
+```
+
+CHUNK 7 prepares the data for modeling claim frequency.
+
+```{r}
+#CHUNK 7
+
+AutoClaim <- read.csv("AutoClaim.csv")
+
+# We will only use GENDER, AGE, BLUEBOOK, and CLM_FREQ5 for demonstration
+AutoClaim_freq <- subset(AutoClaim, select = c('GENDER','AGE','BLUEBOOK','CLM_FREQ5'))
+# Create age bands and then remove age
+AutoClaim_freq$AGE_BAND <- cut(x = AutoClaim_freq$AGE, breaks = c(0,25,35,45,55,65,85))
+AutoClaim_freq$AGE <- NULL
+
+head(AutoClaim_freq)
+
+```
+
+Chunk 8A provides space to fit two models for frequency and compare the results.
+
+```{r}
+#1
+#For a normal model with the identity link, the family does not have to be specified.
+mod1 <- glm(CLM_FREQ5 ~ ., 
+            data = AutoClaim_freq)
+summary(mod1)
+
+#2
+#The log link is the default for the Poisson family, so does not have to specified.
+mod2 <- glm(CLM_FREQ5 ~ ., 
+            data=AutoClaim_freq, 
+            family = poisson)
+
+#3
+predictions.mod1 <- predict(mod1, type = "response")
+predictions.mod2 <- predict(mod2, type = "response")
+
+sse1 <- sum((AutoClaim_freq$CLM_FREQ5 - predictions.mod1)^2)
+sse2 <- sum((AutoClaim_freq$CLM_FREQ5 - predictions.mod2)^2)
+
+sse1
+sse2
+
+#Performance is similar. Although the normal model has the potential to predict negative values, it turns out that the minimum prediction is 0.48 claims.
+
+```
+
+CHUNK 8B provides a sample solution. 
+
+```{r}
+#1
+#For a normal model with the identity link, the family does not have to be specified.
+mod1 <- glm(CLM_FREQ5 ~ ., data=AutoClaim_freq)
+summary(mod1)
+
+#2
+#The log link is the default for the Poisson family, so does not have to specified.
+mod2 <- glm(CLM_FREQ5 ~ ., data=AutoClaim_freq, family = poisson)
+
+#3
+predictions.mod1 <- predict(mod1, type = "response")
+predictions.mod2 <- predict(mod2, type = "response")
+
+sse1 <- sum((AutoClaim_freq$CLM_FREQ5 - predictions.mod1)^2)
+sse2 <- sum((AutoClaim_freq$CLM_FREQ5 - predictions.mod2)^2)
+
+sse1
+sse2
+
+#Performance is similar. Although the normal model has the potential to predict negative values, it turns out that the minimum prediction is 0.48 claims.
+
+```
+
