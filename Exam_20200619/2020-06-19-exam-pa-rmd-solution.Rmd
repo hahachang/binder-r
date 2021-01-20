@@ -1,0 +1,831 @@
+---
+title: "June 19, 2020 Exam PA Rmd file"
+
+---
+
+> This Rmd file accompanies the model solution report--please refer to commentary there on use of these documents. Commentary from those grading the exam are shown in this format in the non-code sections of this Rmd file. Candidates were given a template Rmd file that contained some code and comments from their assistant. That code is noted in the comments. If the code was run as is, it is left alone. If the code was modified in any way, the original code is commented out and the code that was used appears in the next chunk(s). Candidates were not expected to leave the provided code as is, but could directly modify it for use. 
+
+> Candidates should ensure that the code in their RMD file can be run from start to finish without errors.
+
+# Comments in this format are those that reflect additional commentary as part of the actual solution as opposed to commentary from the graders.
+
+Your assistant has provided the following code to load the dataset and provide summary values.
+
+> If running R version >= 3.6.0, uncomment the line: RNGkind(sample.kind = "Rounding") so that random number generation matches the exam conditions present for the June 2020 exams.
+
+# I begin by loading the libraries, data, and summarizing the data and structure to see the missing values.
+
+```{r}
+# RNGkind(sample.kind = "Rounding") # Uncomment if running R 3.6.x or later
+
+# Load packages and data
+
+# Load packages
+library(plyr)
+library(dplyr)
+
+# Load data
+data.all <- read.csv(file = "June 19 data.csv")
+summary(data.all)
+str(data.all)
+```
+
+TASK 1
+
+#The following data adjustments are needed:
+
+# Remove the unknown/invalid gender rows
+# Examine the missing race values further to see if there is evidence they are not missing at random. If not, we could either remove the missing rows or regroup the race variable so ?/other is in the same category. Otherwise, create a separate category for missing and another for other or combine in another way.
+# Remove the weight variable
+# Change admit_type_id to factor variable
+
+# Below, I examine the relationship of missing values for the race variable vs the target variable.
+
+> The best candidates performed analysis of the missing values beyond ourput from the summary function when deciding how to handle missing data.
+
+```{r}
+
+data.all %>%
+    group_by(race) %>%
+    summarise(
+      mean = mean(num_labs),
+      median = median(num_labs),
+      n = n()
+    )
+
+ 
+```
+
+# We do not know if the race variable is missing values at random or not. The output above provides evidence that the missingness may be meaningful because missing race has one of the highest mean num_labs. I will keep it as a separate category. I am also going to regroup the levels combining Asian with AfricanAmerican, and Hispanic with Other.
+
+Edit the data.
+
+Generic code has been provided to edit the data. You can modify and use some or all of this code to edit the data.
+
+Convert numeric variable type to factor variable type
+
+```{r}
+# Replace VARIABLE with the variable name of the variable to be changed.
+
+# data.all$VARIABLE <- as.factor(data.all$VARIABLE) # Replace VARIABLE twice
+# str(data.all)
+```
+
+# Converting admit_type_id to a factor
+```{r}
+data.all$admit_type_id <- as.factor(data.all$admit_type_id)
+```
+
+Remove variables / columns
+
+```{r}
+# Replace VARIABLE with the variable name of the variable to be removed.
+
+# data.all$VARIABLE <- NULL # Replace VARIABLE
+# head(data.all)
+```
+
+# Removing the weight variable
+```{r}
+data.all$weight <- NULL
+```
+
+Remove observations / rows
+
+```{r}
+
+# Replace VARIABLE with the variable name with values to be removed.
+# Replace VALUE with the value of the variable to be removed.
+
+# data.all <- subset(data.all, VARIABLE != "VALUE") # Replace VARIABLE and VALUE
+# Value is in quotation marks for factor variables. No quotation marks for numeric variables.
+
+# data.all$VARIABLE <- droplevels(data.all$VARIABLE) # If VARIABLE is a factor variable this must be run else the dropped factor level will be retained, but with zero observations.
+
+# summary(data.all$VARIABLE)
+```
+
+# Removing observations with invalid genders.
+```{r}
+data.all <- subset(data.all, gender != "Unknown/Invalid")
+data.all$gender <- droplevels(data.all$gender)
+```
+
+Combine variable levels
+
+```{r}
+# Replace VARIABLE with the variable name to have reduced number of levels.
+# Replace LEVELs with new level names.
+
+# print("Data Before Combine Levels")
+# table(data.all$VARIABLE) # Replace VARIABLE
+
+# Combine levels of VARIABLE by mapping one level to another level
+
+# var.levels <- levels(data.all$VARIABLE) # Replace VARIABLE
+# data.all$VARIABLE <- mapvalues(data.all$VARIABLE, var.levels,
+# 		c("LEVEL1", "LEVEL2", "LEVEL3", "LEVEL4", "LEVEL5", "LEVEL6")) # Replace VARIABLE twice and replace LEVELs with the new names.
+
+# print("Data After Combine Levels")
+# table(data.all$VARIABLE) # Replace VARIABLE
+
+# rm(var.levels)
+```
+
+# Regrouping the levels of the race variable, combining Asian with AfricanAmerican, and Hispanic with Other.
+
+> This represents just one way the factor variables could have been regrouped. Alternatives were acceptable, but any approach taken should have been justified in the report.
+
+```{r}
+var.levels <- levels(data.all$race) # Replace VARIABLE
+data.all$race <- mapvalues(
+  data.all$race, var.levels,
+  c("Missing","AfricanAmerican_Asian", "AfricanAmerican_Asian", "Caucasian", "Other", "Other")
+)
+table(data.all$race)
+```
+
+Relevel factor variables.
+
+Change list of factor variables if you removed one of the variables or if you converted a numeric variable to a factor variable.
+
+```{r}
+
+# vars <- c("gender", "age", "race", "metformin", "insulin", "readmitted") # Change list of factor variables to relevel as needed
+# 
+# for (i in vars) {
+#   table <- as.data.frame(table(data.all[, i]))
+#   max <- which.max(table[, 2])
+#   level.name <- as.character(table[max, 1])
+#   data.all[, i] <- relevel(data.all[, i], ref = level.name)
+# }
+```
+
+# Releveling factor variables, including admit_type_id.
+```{r}
+
+vars <- c("gender", "age", "race", "metformin", "insulin", "readmitted", "admit_type_id") # Change list of factor variables to relevel as needed
+
+for (i in vars) {
+  table <- as.data.frame(table(data.all[, i]))
+  max <- which.max(table[, 2])
+  level.name <- as.character(table[max, 1])
+  data.all[, i] <- relevel(data.all[, i], ref = level.name)
+}
+
+```
+
+TASK 2
+
+Explore the data. 
+
+Examine the variables and their relationships to the target variable.
+
+Code has been provided to explore the data. You can modify and use some or all of this code to explore the data.
+
+Descriptive statistics
+
+# Producing some summary statistics for the variables.
+```{r}
+
+summary(data.all)
+```
+
+Bar charts
+
+# Examining the univariate distrubtions using bar charts.
+
+> Candidates were not requried to use the code provided to examine the distributions. Some candidates created additional or alternative visualizations to explore the data.
+
+```{r}
+
+library(ggplot2)
+vars <- colnames(data.all)
+
+for (i in vars) {
+  plot <- ggplot(data.all, aes(x = data.all[, i])) +
+    geom_bar() +
+    labs(x = i) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  print(plot)
+}
+
+rm(i, vars, plot)
+table(data.all$num_labs)
+```
+
+Target variable means by predictor variables.
+
+# Examining the mean days for each variable value.
+```{r}
+# This chunk provides means of the target variable split by predictors.
+vars <- colnames(data.all)
+
+for (i in vars) {
+  x <- data.all %>%
+    group_by_(i) %>%
+    summarise(
+      mean = mean(num_labs),
+      median = median(num_labs),
+      n = n()
+    )
+
+  print(x)
+}
+
+rm(i, vars, x)
+```
+
+Correlations of the target variable to numeric variables and correlation matrix.
+
+# Examining correlation matrix
+```{r}
+
+# Calculate the correlation matrix for numeric variables
+cor.matrix <- cor(data.all[, sapply(data.all, is.numeric)])
+
+print("Correlation Matrix")
+cor.matrix
+```
+
+# Visually inspecting the relationships between the numeric variables and the target variable.
+
+> The best candidates found ways to examine the relationships between numeric variables and the target variable visually because that can yield further insights that the correlation statistic can't provide.
+
+```{r}
+ggplot(data.all, aes(x = num_procs, y = num_labs)) +
+  geom_count(aes(color = ..n..))
+
+ggplot(data.all, aes(x = num_meds, y = num_labs)) +
+  geom_count(aes(color = ..n..))
+
+ggplot(data.all, aes(x = num_ip, y = num_labs)) +
+  geom_count(aes(color = ..n..))
+
+ggplot(data.all, aes(x = num_diags, y = num_labs)) +
+  geom_count(aes(color = ..n..))
+```
+
+Split histograms and boxplots of target by factor variables. 
+
+Copy and add code for other factors as needed.
+
+```{r}
+
+library(gridExtra)
+
+# Explore target num_labs vs. gender.
+
+# Split histogram
+p1 <- ggplot(data.all, aes(
+  x = num_labs,
+  group = gender, fill = gender, y = ..density..
+)) +
+  geom_histogram(position = "dodge", binwidth = 1) # Replace gender twice for other variables
+
+# Boxplot
+p2 <- ggplot(data = data.all, aes(
+  x = gender, y = num_labs,
+  fill = gender
+)) +
+  geom_boxplot(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) # Replace gender twice for other variables
+
+grid.arrange(p1, p2, ncol = 2)
+
+```
+
+# Producing similar plots for other factor variables
+
+```{r}
+# Explore target num_labs vs. age.
+
+# Split histogram
+p1 <- ggplot(data.all, aes(
+  x = num_labs,
+  group = age, fill = age, y = ..density..
+)) +
+  geom_histogram(position = "dodge", binwidth = 1) # Replace gender twice for other variables
+
+# Boxplot
+p2 <- ggplot(data = data.all, aes(
+  x = age, y = num_labs,
+  fill = age
+)) +
+  geom_boxplot(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) # Replace gender twice for other variables
+
+grid.arrange(p1, p2, ncol = 2)
+
+
+# Explore target num_labs vs. race
+
+# Split histogram
+p1 <- ggplot(data.all, aes(
+  x = num_labs,
+  group = race, fill = race, y = ..density..
+)) +
+  geom_histogram(position = "dodge", binwidth = 1) # Replace gender twice for other variables
+
+# Boxplot
+p2 <- ggplot(data = data.all, aes(
+  x = race, y = num_labs,
+  fill = race
+)) +
+  geom_boxplot(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) # Replace gender twice for other variables
+
+grid.arrange(p1, p2, ncol = 2)
+
+
+# Explore target num_labs vs. admit_type_id
+
+# Split histogram
+p1 <- ggplot(data.all, aes(
+  x = num_labs,
+  group = admit_type_id, fill = admit_type_id, y = ..density..
+)) +
+  geom_histogram(position = "dodge", binwidth = 1) # Replace gender twice for other variables
+
+# Boxplot
+p2 <- ggplot(data = data.all, aes(
+  x = admit_type_id, y = num_labs,
+  fill = admit_type_id
+)) +
+  geom_boxplot(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) # Replace gender twice for other variables
+
+grid.arrange(p1, p2, ncol = 2)
+
+
+# Explore target num_labs vs. metformin
+
+# Split histogram
+p1 <- ggplot(data.all, aes(
+  x = num_labs,
+  group = metformin, fill = metformin, y = ..density..
+)) +
+  geom_histogram(position = "dodge", binwidth = 1) # Replace gender twice for other variables
+
+# Boxplot
+p2 <- ggplot(data = data.all, aes(
+  x = metformin, y = num_labs,
+  fill = metformin
+)) +
+  geom_boxplot(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) # Replace gender twice for other variables
+
+grid.arrange(p1, p2, ncol = 2)
+
+
+# Explore target num_labs vs. insulin
+
+# Split histogram
+p1 <- ggplot(data.all, aes(
+  x = num_labs,
+  group = insulin, fill = insulin, y = ..density..
+)) +
+  geom_histogram(position = "dodge", binwidth = 1) # Replace gender twice for other variables
+
+# Boxplot
+p2 <- ggplot(data = data.all, aes(
+  x = insulin, y = num_labs,
+  fill = insulin
+)) +
+  geom_boxplot(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) # Replace gender twice for other variables
+
+grid.arrange(p1, p2, ncol = 2)
+
+
+# Explore target num_labs vs. readmitted
+
+# Split histogram
+p1 <- ggplot(data.all, aes(
+  x = num_labs,
+  group = readmitted, fill = readmitted, y = ..density..
+)) +
+  geom_histogram(position = "dodge", binwidth = 1) # Replace gender twice for other variables
+
+# Boxplot
+p2 <- ggplot(data = data.all, aes(
+  x = readmitted, y = num_labs,
+  fill = readmitted
+)) +
+  geom_boxplot(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) # Replace gender twice for other variables
+
+grid.arrange(p1, p2, ncol = 2)
+
+# Boxplot to take another look at number of diagnoses
+ggplot(data = data.all, aes(
+  x = as.factor(num_diags), y = num_labs,
+  fill = as.factor(num_diags)
+)) +
+  geom_boxplot(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) # Replace gender twice for other variables
+
+# Boxplot for admit type id presentation
+ggplot(data = data.all, aes(
+  x = admit_type_id, y = num_labs,
+  fill = admit_type_id
+)) +
+  geom_boxplot(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) # Replace gender twice for other variables
+
+# Boxplot for age presentation
+ggplot(data = data.all, aes(
+  x = age, y = num_labs,
+  fill = age
+)) +
+  geom_boxplot(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) # Replace gender twice for other variables
+
+```
+
+# admit_type_id, age, and num_meds appear to have strong relationships to the target variable
+
+TASK 3
+
+Consider two data issues.
+
+No code provided.
+
+TASK 4
+
+Create a data summary for your actuarial manager.
+
+No code provided.
+
+TASK 5
+
+Perform Principal Components Analysis (PCA).
+
+The following chunk performs PCA on numeric variables. 
+
+> Candidates were not expected to alter this code.
+
+# Performing PCA using the supplied code.
+```{r}
+
+# Select only the variables used for PCA. Do not change this list.
+data.pca <- data.all[, c("num_procs", "num_meds", "num_ip", "num_diags")]
+
+# Run PCA on the numeric variables. Variables are centered and scaled.
+pca <- prcomp(data.pca, center = TRUE, scale. = TRUE)
+summary(pca)
+pca$rotation
+plot(pca, type = "line")
+```
+
+The following chunk constructs a new feature using the first principal component and attaches it to the data frame.
+
+# Adding the first PC to the data
+```{r}
+
+# Center and scale the variables
+data.pca.std <- as.data.frame(scale(data.pca))
+head(data.pca.std)
+
+# Add the first principal component to the data frame.
+data.all$PC1 <- pca$x[, 1]
+str(data.all$PC1)
+
+```
+
+Split the data into training and test data sets.
+
+# Using the code provided to split the data
+
+> Candidates were not expected to alter this code.
+
+```{r}
+# Split the data into training and test data sets.
+
+library(caret)
+set.seed(100)
+train_ind <- createDataPartition(data.all$num_labs, p = 0.7, list = FALSE)
+data.train <- data.all[train_ind, ]
+data.test <- data.all[-train_ind, ]
+
+print("TRAIN")
+mean(data.train$num_labs)
+
+print("TEST")
+mean(data.test$num_labs)
+
+print("ALL")
+mean(data.all$num_labs)
+
+
+rm(train_ind)
+```
+
+TASK 6
+
+Construct a decision tree.
+
+Construct an unpruned regression tree.Do not use PC1. Do not change the code.
+# Using the code provided to construct the regression tree and calculate performance on train/test data.
+```{r}
+library(rpart)
+library(rpart.plot)
+set.seed(555)
+
+# Fit the model
+tree1 <- rpart(num_labs ~ . - PC1,
+  data = data.train,
+  method = "anova",
+  control = rpart.control(cp = 0.001, minbucket = 20)
+)
+
+tree1
+
+# Plot the tree
+rpart.plot(tree1)
+
+# Predict on training data
+tree1.pred.train <- predict(tree1, data.train, type = "vector")
+
+# Calculate the mean squared error on training data
+sum((data.train$num_labs - tree1.pred.train)^2) / nrow(data.train)
+
+# Predict on test data
+tree1.pred.test <- predict(tree1, data.test, type = "vector")
+
+# Calculate the mean squared error on test data
+sum((data.test$num_labs - tree1.pred.test)^2) / nrow(data.test)
+
+# Calculate the Pearson goodness-of-fit statistic on training data
+sum((data.train$num_labs - tree1.pred.train)^2 / tree1.pred.train) / nrow(data.train)
+
+# Calculate the Pearson goodness-of-fit statistic on test data
+sum((data.test$num_labs - tree1.pred.test)^2 / tree1.pred.test) / nrow(data.test)
+```
+
+
+
+
+
+Use cost-complexity pruning to produce a reduced tree.
+# Getting the CP table and CP plot to help select the optimal CP parameter
+```{r}
+# Display the complexity parameter table and plot for tree1.
+tree1$cptable
+plotcp(tree1)
+```
+
+
+```{r}
+# Prune the tree by replacing XX with the complexity parameter that will result in eight leaves.
+# If eight is not a possible option, select the largest number less than eight that is possible.
+# tree2 <- prune(tree1, cp = XX) # Replace XX.
+# 
+# tree2
+# 
+# # Plot the tree
+# rpart.plot(tree2)
+# 
+# # Predict on training data
+# tree2.pred.train <- predict(tree2, data.train, type = "vector")
+# 
+# # Calculate the mean squared error on training data
+# sum((data.train$num_labs - tree2.pred.train)^2) / nrow(data.train)
+# 
+# # Predict on test data
+# tree2.pred.test <- predict(tree2, data.test, type = "vector")
+# 
+# # Calculate the mean squared error on test data
+# sum((data.test$num_labs - tree2.pred.test)^2) / nrow(data.test)
+```
+
+# Inputting the CP value that will produce a tree with 8 leaves, calculating performance values, and plotting the tree.
+```{r}
+# Prune the tree by replacing XX with the complexity parameter that will result in eight leaves.
+# If eight is not a possible option, select the largest number less than eight that is possible.
+tree2 <- prune(tree1, cp = 0.0066 ) # Replace XX.
+
+tree2
+
+# Plot the tree
+rpart.plot(tree2)
+
+# Predict on training data
+tree2.pred.train <- predict(tree2, data.train, type = "vector")
+
+# Calculate the mean squared error on training data
+sum((data.train$num_labs - tree2.pred.train)^2) / nrow(data.train)
+
+# Predict on test data
+tree2.pred.test <- predict(tree2, data.test, type = "vector")
+
+# Calculate the mean squared error on test data
+sum((data.test$num_labs - tree2.pred.test)^2) / nrow(data.test)
+
+# Calculate the Pearson goodness-of-fit statistic on training data
+sum((data.train$num_labs - tree2.pred.train)^2 / tree2.pred.train) / nrow(data.train)
+
+# Calculate the Pearson goodness-of-fit statistic on test data
+sum((data.test$num_labs - tree2.pred.test)^2 / tree2.pred.test) / nrow(data.test)
+```
+
+
+
+TASK 7
+
+Construct a generalized linear model (GLM).
+
+Fit a GLM with all original variables included but excluding the PCA variable. Do not change the Poisson distribution or log link function.
+
+# Using the provided code to fit the first GLM without PC1 and calculate performance.
+
+```{r}
+# Fit the model
+glm1 <- glm(num_labs ~ . - PC1,
+  data = data.train,
+  family = poisson(link = "log") # Do not change.
+)
+
+summary(glm1)
+
+# Predict on training data
+glm1.pred.train <- predict(glm1, data.train, type = "response")
+
+# Calculate the mean squared error on training data
+sum((data.train$num_labs - glm1.pred.train)^2) / nrow(data.train)
+
+# Predict on test data
+glm1.pred.test <- predict(glm1, data.test, type = "response")
+
+# Calculate the mean squared error on test data
+sum((data.test$num_labs - glm1.pred.test)^2) / nrow(data.test)
+```
+
+Fit a GLM with the PCA variable created in Task 5 included (and without the numeric variables used to produce the PCA variable). Do not change the Poisson distribution or log link function.
+
+# Using the provided code to fit a GLM with PC1 instead of the numeric variables.
+
+> Some candidates altered the code to include the PC and the numeric variables. This was not advisable since problems can arise related to multicollinearity.
+
+```{r}
+# Fit the model
+glm2 <- glm(num_labs ~ . - num_procs - num_meds - num_ip - num_diags,
+  data = data.train,
+  family = poisson(link = "log") # Do not change.
+)
+
+summary(glm2)
+
+# Predict on training data
+glm2.pred.train <- predict(glm2, data.train, type = "response")
+
+# Calculate the mean squared error on training data
+sum((data.train$num_labs - glm2.pred.train)^2) / nrow(data.train)
+
+# Predict on test data
+glm2.pred.test <- predict(glm2, data.test, type = "response")
+
+# Calculate the mean squared error on test data
+sum((data.test$num_labs - glm2.pred.test)^2) / nrow(data.test)
+```
+
+TASK 8
+
+Perform feature selection with lasso regression.
+
+Use cross-validation to determine appropriate level of lambda for lasso regression.
+
+```{r}
+library(glmnet)
+
+# Format data as matrices (necessary for glmnet). Uncomment two items that reflect your decision from Task 7.
+
+# lasso.mat.train <- model.matrix(num_labs ~ . - PC1, data.train)
+# lasso.mat.test <- model.matrix(num_labs ~ . - PC1, data.test)
+# lasso.mat.train <- model.matrix(num_labs ~ . - num_procs - num_meds - num_ip - num_diags, data.train)
+# lasso.mat.test <- model.matrix(num_labs ~ . - num_procs - num_meds - num_ip - num_diags, data.test)
+
+# set.seed(789)
+# 
+# lasso.cv <- cv.glmnet(
+#   x = lasso.mat.train,
+#   y = data.train$num_labs,
+#   family = "poisson", # Do not change.
+#   alpha = 1 # alpha = 1 for lasso
+# )
+```
+
+# Modifying the code to use the numeric variables instead of PC1.
+
+```{r}
+library(glmnet)
+
+# Format data as matrices (necessary for glmnet). Uncomment two items that reflect your decision from Task 7.
+
+ lasso.mat.train <- model.matrix(num_labs ~ . - PC1, data.train)
+ lasso.mat.test <- model.matrix(num_labs ~ . - PC1, data.test)
+# lasso.mat.train <- model.matrix(num_labs ~ . - num_procs - num_meds - num_ip - num_diags, data.train)
+# lasso.mat.test <- model.matrix(num_labs ~ . - num_procs - num_meds - num_ip - num_diags, data.test)
+
+set.seed(789)
+
+lasso.cv <- cv.glmnet(
+  x = lasso.mat.train,
+  y = data.train$num_labs,
+  family = "poisson", # Do not change.
+  alpha = 1 # alpha = 1 for lasso
+)
+```
+
+Use the cross-validation results to run the final lasso regression model.
+
+# Using the code supplied to fit the final lasso model and measure the performance.
+
+```{r}
+# Fit the model
+lasso <- glmnet(
+  x = lasso.mat.train,
+  y = data.train$num_labs,
+  family = "poisson", # Do not change.
+  lambda = lasso.cv$lambda.1se,
+  alpha = 1 # alpha = 1 for lasso
+)
+
+# List variables
+lasso$beta
+
+# Predict on training data
+lasso.pred.train <- predict(lasso, lasso.mat.train, type = "response")
+
+# Calculate the mean squared error on training data
+sum((data.train$num_labs - lasso.pred.train)^2) / nrow(data.train)
+
+# Predict on test data
+lasso.pred.test <- predict(lasso, lasso.mat.test, type = "response")
+
+# Calculate the mean squared error on test data
+sum((data.test$num_labs - lasso.pred.test)^2) / nrow(data.test)
+```
+
+
+
+TASK 9
+
+No code provided.
+
+TASK 10
+
+No code provided.
+
+TASK 11
+
+Interpret the model for the client.
+
+Create the GLM model based on the lasso results and run on the full dataset to interpret coefficients.
+
+# I use the variables selected by the LASSO model below to fit a glm on the full data and measure performance there.
+```{r}
+# Fit the model
+glm3 <- glm(num_labs ~ num_diags + num_meds + admit_type_id + metformin,
+  data = data.all,
+  family = poisson(link = "log") # Do not change.
+)
+
+summary(glm3)
+
+# Predict on full data
+glm3.pred.all <- predict(glm3, data.all, type = "response")
+
+# Calculate the mean squared error on full data
+sum((data.all$num_labs - glm3.pred.all)^2) / nrow(data.all)
+
+
+
+
+```
+
+TASK 12
+
+No code provided.
+
+# The above chunk fit the final model on all of the data, but we haven't estimated the performance using the test set yet because we aren't using the LASSO model directly, so I'm going to fit the model to the training data and measure the performance on the test set here. This performance measurement will be used to compare the performance to earlier models within the executive summary.
+
+```{r}
+# Fit the model on training data for performance measurement only
+
+glm_perf_measurement <- glm(num_labs ~ num_diags + num_meds + admit_type_id + metformin,
+  data = data.train,
+  family = poisson(link = "log") # Do not change.
+)
+
+summary(glm_perf_measurement)
+
+# Predict on full data
+glm_perf_measurement.pred.test <- predict(glm_perf_measurement, data.test, type = "response")
+
+# Calculate the mean squared error on full data
+sum((data.test$num_labs - glm_perf_measurement.pred.test)^2) / nrow(data.test)
+
+```
+
+

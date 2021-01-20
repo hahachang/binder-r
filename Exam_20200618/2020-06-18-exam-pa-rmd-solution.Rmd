@@ -1,0 +1,435 @@
+---
+title: "June 18, 2020 Exam PA Rmd file"
+
+---
+
+> This Rmd file accompanies the model solution report--please refer to commentary there on use of these documents. Commentary from those grading the exam are shown in this format in the non-code sections of this Rmd file. Candidates were given a template Rmd file that contained some code and comments from their assistant. That code is noted in the comments. If the code was run as is, it is left alone. If the code was modified in any way, the original code is commented out and the code that was used appears in the next chunk(s). Candidates were not expected to leave the provided code as is, but could directly modify it for use. 
+
+> Candidates should ensure that the code in their RMD file can be run from start to finish without errors.
+
+# Comments in this format are those that reflect additional commentary as part of the actual solution as opposed to commentary from the graders.
+
+> If running R version >= 3.6.0, uncomment the line: RNGkind(sample.kind = "Rounding") so that random number generation matches the exam conditions present for the June 2020 exams.
+
+```{r}
+# RNGkind(sample.kind = "Rounding")
+```
+
+Task 1: Explore the data
+
+```{r}
+# Load needed libraries.
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(caret)
+
+# Read the data.
+df <- read.csv("June 18 data.csv")
+summary(df)
+
+# Create a histogram for irate.
+ggplot(df, aes(x = irate)) +
+  geom_histogram(binwidth = 5, fill = "royalblue", col = "royalblue")
+
+# Create bar chart for month.
+ggplot(df, aes(x = month)) +
+  geom_bar(stat = "count", fill = "royalblue", col = "royalblue") +
+  theme(axis.text = element_text(size = 6))
+
+# Create a bar chart for edu_years.
+ggplot(df, aes(x = edu_years)) +
+  geom_bar(stat = "count", fill = "royalblue", col = "royalblue") +
+  theme(axis.text = element_text(size = 6))
+
+# Create a boxplot of the age distribution for different jobs.
+boxplot(age ~ job, data = df, ylab = "Age Distribution", cex.axis = 0.5)
+
+# 	Create a graph showing the proportion purchasing by age.
+ggplot(df) +
+  aes(x = age, fill = factor(purchase)) +
+  labs(y = "Proportion of Purchases") +
+  ggtitle("Proportion of Purchases by age") +
+  geom_bar(position = "fill")
+
+# Create a graph showing the proportion purchasing by month.
+ggplot(df) +
+  aes(x = month, fill = factor(purchase)) +
+  labs(y = "Proportion of Purchases") +
+  ggtitle("Proportion of Purchases by month") +
+  geom_bar(position = "fill")
+```
+
+Task 2: Consider the education variable.
+
+No code provided.
+
+Task 3: Handle missing values.
+
+```{r}
+
+# Check missing values. Display missing proportions for each variable that has them.
+missing_proportion <- colMeans(is.na(df))
+missing_data <- data.frame(colnames = colnames(df), missing_proportion = missing_proportion)
+missing_data %>%
+  filter(missing_proportion > 0) %>%
+  ggplot(aes(x = colnames, y = missing_proportion, label = missing_proportion)) +
+  geom_bar(stat = "identity", fill = "royalblue", col = "royalblue")
+
+# The code below calculates the proportion of purchases for NAs and for nonNAs for each variable that has NAs.
+#
+print("Purchase Proportions by variable, for missing and non missing values")
+print(sprintf("%10s %15s %15s", "Variable", "PP_for_NAs", "PP_for_non_NAs"))
+varnames <- c("housing", "job", "loan", "marital", "edu_years")
+for (t in varnames)
+{
+  ind <- is.na(df[t])
+  print(sprintf("%10s %15.2f %15.2f", t, mean(df["purchase"][ind]), mean(df["purchase"][!ind])))
+}
+```
+
+The following code can be used to handle missing values.
+
+```{r}
+
+# Use one of the four choices below to deal with the NAs.
+# Choose for each variable that has NAs.
+# Replace varname with the actual variable name.
+
+# Remove column
+# df$varname <- NULL
+
+# Remove rows
+df <- df[!is.na(df$marital), ]
+df <- df[!is.na(df$loan), ]
+
+# Convert missing values to "unknown" (works only for factor variables)
+# First create a new level.
+levels(df$housing)[length(levels(df$housing)) + 1] <- "unknown"
+# Then use the new level to indicate NA.
+df$housing[is.na(df$housing)] <- "unknown"
+
+# First create a new level.
+levels(df$job)[length(levels(df$job)) + 1] <- "unknown"
+# Then use the new level to indicate NA.
+df$job[is.na(df$job)] <- "unknown"
+
+# Impute using the mean (works only for numeric variables)
+df$edu_years[is.na(df$edu_years)] <- mean(df$edu_years, na.rm = TRUE)
+
+summary(df)
+```
+
+Task 4: Investigate correlations.
+
+```{r} 
+tmp <- dplyr::select(df, age, edu_years, CPI, CCI, irate, employment)
+cor(tmp, use = "complete.obs")
+```
+
+Task 5: Conduct a principal components analysis (PCA)
+
+```{r}
+# Perform Principal Components Analysis of the four variables below.
+# The variables are standardized. Then the components are calculated.
+tmp <- dplyr::select(df, CPI, CCI, irate, employment)
+apply(tmp, 2, mean)
+apply(tmp, 2, sd)
+pca <- prcomp(tmp, scale = TRUE)
+pca
+
+# 	Create a bi-plot.
+biplot(pca, cex = 0.8, xlabs = rep(".", nrow(tmp)))
+
+# Consider the variance explained by the principal components.
+# Use the output to decide how many principal components to use in the GLM models.
+vars_pca <- apply(pca$x, 2, var)
+vars_pca / sum(vars_pca)
+```
+
+Calculate the principal components. 
+
+```{r}
+pred <- as.data.frame(predict(pca, newdata = df[, c("CPI", "CCI", "irate", "employment")]))
+
+# Use the code below to attach the principal components you will use to the dataframe.
+# Change the XX in the code below to indicate how many of the principal components you will use.
+# If you decide to use the first three, change the XX to 3 twice, once for train, once for test.
+df <- cbind(df, pred[, 1:2])
+```
+
+Split the data into training and testing. Check that the split looks reasonable.
+
+```{r}
+set.seed(1875)
+train_ind <- createDataPartition(df$purchase, p = 0.7, list = FALSE)
+data_train <- df[train_ind, ]
+data_test <- df[-train_ind, ]
+rm(train_ind)
+
+print("Mean value of purchase on train and test data splits")
+mean(data_train$purchase)
+mean(data_test$purchase)
+
+
+```
+
+TASK 6: Create a generalized linear model (GLM).
+
+```{r}
+# Construct GLM using only age as an independent variable.
+
+glm <- glm(purchase ~ age,
+  data = data_train,
+  family = binomial(link = "logit")
+)
+
+summary(glm)
+
+# Evaluate GLM: construct ROC and calculate AUC
+library(pROC)
+
+glm_probs <- predict(glm, data_train, type = "response")
+glm_probs_test <- predict(glm, data_test, type = "response")
+
+roc <- roc(data_train$purchase, glm_probs)
+par(pty = "s")
+plot(roc)
+pROC::auc(roc)
+
+roc <- roc(data_test$purchase, glm_probs_test)
+plot(roc)
+pROC::auc(roc)
+
+# Construct a GLM using a full set of independent variables.
+
+# The code must be changed to eliminate the principal components that you did not choose.
+glm <- glm(purchase ~ age + job + marital + edu_years + housing + loan + phone + month + weekday + PC1 ,
+  data = data_train,
+  family = binomial(link = "logit")
+)
+
+summary(glm)
+
+# Evaluate GLM: construct ROC and calculate AUC
+
+glm_probs <- predict(glm, data_train, type = "response")
+glm_probs_test <- predict(glm, data_test, type = "response")
+
+roc <- roc(data_train$purchase, glm_probs)
+par(pty = "s")
+plot(roc)
+pROC::auc(roc)
+
+roc <- roc(data_test$purchase, glm_probs_test)
+plot(roc)
+pROC::auc(roc)
+```
+
+TASK 7: Select features using stepwise selection.
+
+```{r}
+# The following code executes the stepAIC procedure with backward selection and AIC. It first runs a new GLM adding the square of age.
+
+# The code must be changed to eliminate the principal components that you did not choose.
+glm2 <- glm(purchase ~ age + I(age^2) + job + marital + edu_years + housing + loan + phone + month + weekday + PC1,
+  data = data_train,
+  family = binomial(link = "logit")
+)
+
+library(MASS)
+
+
+stepAIC(glm2,
+  direction = "backward",
+  k = 2
+)
+```
+
+```{r}
+# To evaluate the selected model, change the variable list to those selected by stepAIC.
+glm.reduced <- glm(purchase ~ age + I(age^2) + edu_years + loan + phone + month + PC1,
+  data = data_train,
+  family = binomial(link = "logit")
+)
+
+summary(glm.reduced)
+```
+
+TASK 8: Evaluate the model.
+
+```{r}
+# Evaluate GLM: construct ROC and calculate AUC
+
+glm_probs <- predict(glm.reduced, data_train, type = "response")
+glm_probs_test <- predict(glm.reduced, data_test, type = "response")
+
+roc <- roc(data_train$purchase, glm_probs)
+par(pty = "s")
+plot(roc)
+pROC::auc(roc)
+
+roc <- roc(data_test$purchase, glm_probs_test)
+plot(roc)
+pROC::auc(roc)
+```
+
+Task 9: Investigate a shrinkage method.
+
+```{r}
+library(glmnet)
+set.seed(42)
+
+X.train <- model.matrix(purchase ~ age + I(age^2) + job + marital + edu_years + housing + loan + phone + month + weekday + PC1,
+  data = data_train
+)
+X.test <- model.matrix(purchase ~ age + I(age^2) + job + marital + edu_years + housing + loan + phone + month + weekday + PC1,
+  data = data_test
+)
+
+m <- cv.glmnet(
+  x = X.train,
+  y = data_train$purchase,
+  family = "binomial",
+  type.measure = "class",
+  alpha = 0.5
+) # alpha = 1 implies LASSO, alpha = 0 implies ridge, values between 0 and 1 imply elastic net
+plot(m)
+ m$lambda.min
+```
+
+Use the cross-validation results to run the final elastic net regression model.
+
+```{r}
+# Fit the model
+m.final <- glmnet(
+  x = X.train,
+  y = data_train$purchase,
+  family = "binomial",
+  lambda = m$lambda.min,
+  alpha = 0.5
+)
+
+# List variables
+m.final$beta
+
+# Evaluate against train and test sets
+
+# Predict on training data
+enet.pred.train <- predict(m.final, X.train, type = "response")
+
+roc <- roc(as.numeric(data_train$purchase), enet.pred.train[, 1])
+par(pty = "s")
+plot(roc)
+pROC::auc(roc)
+
+# Predict on test data
+enet.pred.test <- predict(m.final, X.test, type = "response")
+
+roc <- roc(as.numeric(data_test$purchase), enet.pred.test[, 1])
+par(pty = "s")
+plot(roc)
+pROC::auc(roc)
+```
+
+Task 10: Construct a decision tree.
+
+```{r}
+
+# Load the two needed libraries
+library(rpart)
+library(rpart.plot)
+
+set.seed(1234)
+
+formula <- "purchase ~ age + job + marital + edu_years + housing + loan + phone + month + weekday + CPI + CCI + irate"
+
+tree1 <- rpart(formula,
+  data = data_train, method = "class",
+  control = rpart.control(minbucket = 5, cp = 0.0005, maxdepth = 7),
+  parms = list(split = "gini")
+)
+
+rpart.plot(tree1, type = 0, digits = 2)
+tree1
+
+# Obtain predicted probabilities for train and for test.
+pred.prob.tr <- predict(tree1, type = "prob")
+pred.prob.te <- predict(tree1, type = "prob", newdata = data_test)
+
+# Construct ROC and calculate AUC for the training data.
+library(pROC)
+print("Training ROC and AUC")
+roc <- roc(data_train$purchase, pred.prob.tr[, "1"])
+par(pty = "s")
+plot(roc)
+
+pROC::auc(roc)
+
+# Do the same for test.
+print("Test ROC and AUC")
+roc2 <- roc(data_test$purchase, pred.prob.te[, "1"])
+par(pty = "s")
+plot(roc2)
+
+pROC::auc(roc2)
+```
+
+Task 11: Employ cost-complexity pruning to construct a smaller tree. 
+
+```{r}
+
+tree1$cptable # This code displays the complexity parameter table for tree1.
+# Select the optimal pruning parameter from the table.
+plotcp(tree1)
+```
+
+```{r}
+
+# Replace XX in the code below with the optimal pruning parameter.
+tree2 <- prune(tree1, cp = .006, "CP")
+
+# Show the pruned tree.
+rpart.plot(tree2)
+tree2
+
+# Obtain predicted probabilities for train and for test.
+pred.prune.prob.tr <- predict(tree2, type = "prob")
+pred.prune.prob.te <- predict(tree2, type = "prob", newdata = data_test)
+
+# Construct ROC and calculate AUC for the training data.
+library(pROC)
+print("Training ROC and AUC")
+roc <- roc(data_train$purchase, pred.prune.prob.tr[, "1"])
+par(pty = "s")
+plot(roc)
+
+pROC::auc(roc)
+
+# Do the same for test.
+print("Test ROC and AUC")
+roc2 <- roc(data_test$purchase, pred.prune.prob.te[, "1"])
+par(pty = "s")
+plot(roc2)
+
+pROC::auc(roc2)
+```
+
+Task 13: Executive summary
+
+A calculation is needed to explain the impact of items contributing to the PCA. The following calculation determines the change needed from each contributor to result in a 1.10 odds factor. This ultimately wasn't used in the executive summary but helped to ascertain that the economic factors are among the most significant.
+
+```{r}
+# This version of coefficients gives the intercept needed
+coef(m.final)
+
+# This gives the movements needed for a 1.10 odds factor 
+log(1.10)/(m.final$beta[35]*pca$rotation[,1]/pca$scale)
+
+# Not including the scale shows how likely these are in terms of standard deviations of the original data
+log(1.10)/(m.final$beta[35]*pca$rotation[,1])
+
+# The centers are needed to provide information on how far conditions are from "average"
+pca$center
+
+```

@@ -1,0 +1,388 @@
+---
+title: "June 18, 2020 Exam PA Rmd file"
+
+---
+
+Task 1: Explore the data
+
+```{r}
+# Load needed libraries.
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(caret)
+
+# Read the data.
+df <- read.csv("June 18 data.csv")
+summary(df)
+
+# Create a histogram for irate.
+ggplot(df, aes(x = irate)) +
+  geom_histogram(binwidth = 5, fill = "royalblue", col = "royalblue")
+
+# Create bar chart for month.
+ggplot(df, aes(x = month)) +
+  geom_bar(stat = "count", fill = "royalblue", col = "royalblue") +
+  theme(axis.text = element_text(size = 6))
+
+# Create a bar chart for edu_years.
+ggplot(df, aes(x = edu_years)) +
+  geom_bar(stat = "count", fill = "royalblue", col = "royalblue") +
+  theme(axis.text = element_text(size = 6))
+
+# Create a boxplot of the age distribution for different jobs.
+boxplot(age ~ job, data = df, ylab = "Age Distribution", cex.axis = 0.5)
+
+# 	Create a graph showing the proportion purchasing by age.
+ggplot(df) +
+  aes(x = age, fill = factor(purchase)) +
+  labs(y = "Proportion of Purchases") +
+  ggtitle("Proportion of Purchases by age") +
+  geom_bar(position = "fill")
+
+# Create a graph showing the proportion purchasing by month.
+ggplot(df) +
+  aes(x = month, fill = factor(purchase)) +
+  labs(y = "Proportion of Purchases") +
+  ggtitle("Proportion of Purchases by month") +
+  geom_bar(position = "fill")
+```
+
+Task 2: Consider the education variable.
+
+No code provided.
+
+Task 3: Handle missing values.
+
+```{r}
+
+# Check missing values. Display missing proportions for each variable that has them.
+missing_proportion <- colMeans(is.na(df))
+missing_data <- data.frame(colnames = colnames(df), missing_proportion = missing_proportion)
+missing_data %>%
+  filter(missing_proportion > 0) %>%
+  ggplot(aes(x = colnames, y = missing_proportion, label = missing_proportion)) +
+  geom_bar(stat = "identity", fill = "royalblue", col = "royalblue")
+
+# The code below calculates the proportion of purchases for NAs and for nonNAs for each variable that has NAs.
+#
+print("Purchase Proportions by variable, for missing and non missing values")
+print(sprintf("%10s %15s %15s", "Variable", "PP_for_NAs", "PP_for_non_NAs"))
+varnames <- c("housing", "job", "loan", "marital", "edu_years")
+for (t in varnames)
+{
+  ind <- is.na(df[t])
+  print(sprintf("%10s %15.2f %15.2f", t, mean(df["purchase"][ind]), mean(df["purchase"][!ind])))
+}
+```
+
+The following code can be used to handle missing values.
+
+```{r}
+
+# Use one of the four choices below to deal with the NAs.
+# Choose for each variable that has NAs.
+# Replace varname with the actual variable name.
+
+# Remove column
+df$varname <- NULL
+
+# Remove rows
+df <- df[!is.na(df$varname), ]
+
+# Convert missing values to "unknown" (works only for factor variables)
+# First create a new level.
+levels(df$varname)[length(levels(df$varname)) + 1] <- "unknown"
+# Then use the new level to indicate NA.
+df$varname[is.na(df$varname)] <- "unknown"
+
+# Impute using the mean (works only for numeric variables)
+df$varname[is.na(df$varname)] <- mean(df$varname, na.rm = TRUE)
+```
+
+Task 4: Investigate correlations.
+
+```{r} 
+tmp <- dplyr::select(df, age, edu_years, CPI, CCI, irate, employment)
+cor(tmp, use = "complete.obs")
+```
+
+Task 5: Conduct a principal components analysis (PCA)
+
+```{r}
+# Perform Principal Components Analysis of the four variables below.
+# The variables are standardized. Then the components are calculated.
+tmp <- dplyr::select(df, CPI, CCI, irate, employment)
+apply(tmp, 2, mean)
+apply(tmp, 2, sd)
+pca <- prcomp(tmp, scale = TRUE)
+pca
+
+# 	Create a bi-plot.
+biplot(pca, cex = 0.8, xlabs = rep(".", nrow(tmp)))
+
+# Consider the variance explained by the principal components.
+# Use the output to decide how many principal components to use in the GLM models.
+vars_pca <- apply(pca$x, 2, var)
+vars_pca / sum(vars_pca)
+```
+
+Calculate the principal components and add the first one to the data frame.
+
+```{r}
+pred <- as.data.frame(predict(pca, newdata = df[, c("CPI", "CCI", "irate", "employment")]))
+
+df$PC1 <- pred$PC1
+```
+
+Split the data into training and testing. Check that the split looks reasonable.
+
+```{r}
+set.seed(1875)
+train_ind <- createDataPartition(df$purchase, p = 0.7, list = FALSE)
+data_train <- df[train_ind, ]
+data_test <- df[-train_ind, ]
+rm(train_ind)
+
+print("Mean value of purchase on train and test data splits")
+mean(data_train$purchase)
+mean(data_test$purchase)
+
+
+```
+
+TASK 6: Create a generalized linear model (GLM).
+
+```{r}
+# Construct GLM using only age as an independent variable.
+
+glm <- glm(purchase ~ age,
+  data = data_train,
+  family = binomial(link = "logit")
+)
+
+summary(glm)
+
+# Evaluate GLM: construct ROC and calculate AUC
+library(pROC)
+
+glm_probs <- predict(glm, data_train, type = "response")
+glm_probs_test <- predict(glm, data_test, type = "response")
+
+roc <- roc(data_train$purchase, glm_probs)
+par(pty = "s")
+plot(roc)
+pROC::auc(roc)
+
+roc <- roc(data_test$purchase, glm_probs_test)
+plot(roc)
+pROC::auc(roc)
+
+# Construct a GLM using a full set of independent variables and the first PC.
+
+glm <- glm(purchase ~ age + job + marital + edu_years + housing + loan + phone + month + weekday + PC1,
+  data = data_train,
+  family = binomial(link = "logit")
+)
+
+summary(glm)
+
+# Evaluate GLM: construct ROC and calculate AUC
+
+glm_probs <- predict(glm, data_train, type = "response")
+glm_probs_test <- predict(glm, data_test, type = "response")
+
+roc <- roc(data_train$purchase, glm_probs)
+par(pty = "s")
+plot(roc)
+pROC::auc(roc)
+
+roc <- roc(data_test$purchase, glm_probs_test)
+plot(roc)
+pROC::auc(roc)
+```
+
+TASK 7: Select features using stepwise selection.
+
+```{r}
+# The following code executes the stepAIC procedure with backward selection and AIC. It first runs a new GLM adding the square of age.
+
+glm2 <- glm(purchase ~ age + I(age^2) + job + marital + edu_years + housing + loan + phone + month + weekday + PC1,
+  data = data_train,
+  family = binomial(link = "logit")
+)
+
+library(MASS)
+
+
+stepAIC(glm2,
+  direction = "backward",
+  k = 2
+)
+```
+
+```{r}
+# To evaluate the selected model, change the variable list to those selected by stepAIC.
+glm.reduced <- glm(purchase ~ age + I(age^2) + job + marital + edu_years + housing + loan + phone + month + weekday + PC1,
+  data = data_train,
+  family = binomial(link = "logit")
+)
+
+summary(glm.reduced)
+```
+
+TASK 8: Evaluate the model.
+
+```{r}
+# Evaluate GLM: construct ROC and calculate AUC
+
+glm_probs <- predict(glm.reduced, data_train, type = "response")
+glm_probs_test <- predict(glm.reduced, data_test, type = "response")
+
+roc <- roc(data_train$purchase, glm_probs)
+par(pty = "s")
+plot(roc)
+pROC::auc(roc)
+
+roc <- roc(data_test$purchase, glm_probs_test)
+plot(roc)
+pROC::auc(roc)
+```
+
+Task 9: Investigate a shrinkage method.
+
+```{r}
+library(glmnet)
+set.seed(42)
+
+
+X.train <- model.matrix(purchase ~ age + I(age^2) + job + marital + edu_years + housing + loan + phone + month + weekday + PC1,
+  data = data_train
+)
+X.test <- model.matrix(purchase ~ age + I(age^2) + job + marital + edu_years + housing + loan + phone + month + weekday + PC1,
+  data = data_test
+)
+
+m <- cv.glmnet(
+  x = X.train,
+  y = data_train$purchase,
+  family = "binomial",
+  type.measure = "class",
+  alpha = 0.5
+) # alpha = 1 implies LASSO, alpha = 0 implies ridge, values between 0 and 1 imply elastic net
+plot(m)
+```
+
+Use the cross-validation results to run the final elastic net regression model.
+
+```{r}
+# Fit the model
+m.final <- glmnet(
+  x = X.train,
+  y = data_train$purchase,
+  family = "binomial",
+  lambda = m$lambda.min,
+  alpha = 0.5
+)
+
+# List variables
+m.final$beta
+
+# Evaluate against train and test sets
+
+# Predict on training data
+enet.pred.train <- predict(m.final, X.train, type = "response")
+
+roc <- roc(as.numeric(data_train$purchase), enet.pred.train[, 1])
+par(pty = "s")
+plot(roc)
+pROC::auc(roc)
+
+# Predict on test data
+enet.pred.test <- predict(m.final, X.test, type = "response")
+
+roc <- roc(as.numeric(data_test$purchase), enet.pred.test[, 1])
+par(pty = "s")
+plot(roc)
+pROC::auc(roc)
+```
+
+Task 10: Construct a decision tree.
+
+```{r}
+
+# Load the two needed libraries
+library(rpart)
+library(rpart.plot)
+
+set.seed(1234)
+
+formula <- "purchase ~ age + job + marital + edu_years + housing + loan + phone + month + weekday + CPI + CCI + irate"
+
+tree1 <- rpart(formula,
+  data = data_train, method = "class",
+  control = rpart.control(minbucket = 5, cp = 0.0005, maxdepth = 7),
+  parms = list(split = "gini")
+)
+
+rpart.plot(tree1, type = 0, digits = 4)
+
+# Obtain predicted probabilities for train and for test.
+pred.prob.tr <- predict(tree1, type = "prob")
+pred.prob.te <- predict(tree1, type = "prob", newdata = data_test)
+
+# Construct ROC and calculate AUC for the training data.
+library(pROC)
+print("Training ROC and AUC")
+roc <- roc(data_train$purchase, pred.prob.tr[, "1"])
+par(pty = "s")
+plot(roc)
+
+pROC::auc(roc)
+
+# Do the same for test.
+print("Test ROC and AUC")
+roc2 <- roc(data_test$purchase, pred.prob.te[, "1"])
+par(pty = "s")
+plot(roc2)
+
+pROC::auc(roc2)
+```
+
+Task 11: Employ cost-complexity pruning to construct a smaller tree. 
+
+```{r}
+
+tree1$cptable # This code displays the complexity parameter table for tree1.
+# Select the optimal pruning parameter from the table.
+```
+
+```{r}
+
+# Replace XX in the code below with the selected complexity parameter.
+tree2 <- prune(tree1, cp = XX, "CP")
+
+# Show the pruned tree.
+rpart.plot(tree2)
+
+# Obtain predicted probabilities for train and for test.
+pred.prune.prob.tr <- predict(tree2, type = "prob")
+pred.prune.prob.te <- predict(tree2, type = "prob", newdata = data_test)
+
+# Construct ROC and calculate AUC for the training data.
+library(pROC)
+print("Training ROC and AUC")
+roc <- roc(data_train$purchase, pred.prune.prob.tr[, "1"])
+par(pty = "s")
+plot(roc)
+
+pROC::auc(roc)
+
+# Do the same for test.
+print("Test ROC and AUC")
+roc2 <- roc(data_test$purchase, pred.prune.prob.te[, "1"])
+par(pty = "s")
+plot(roc2)
+
+pROC::auc(roc2)
+```
