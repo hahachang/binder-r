@@ -1,0 +1,599 @@
+---
+title: "December 13, 2019 Exam PA Rmd solution file"
+
+---
+
+> This Rmd file accompanies the model solution report--please refer to commentary there on use of these documents. Commentary from those grading the exam are shown in this format in the non-code sections of this Rmd file. Candidates were given a template Rmd file that contained some code and comments from their assistant. That code is noted in the comments. If the code was run as is, it is left alone. If the code was modified in any way, the original code is commented out and the code that was used appears in the next chunk(s). Candidates were not expected to leave the provided code as is, but could directly modify it for use. 
+
+> Candidates should ensure that the code in their RMD file can be run from start to finish without errors.
+
+# Comments in this format are those that reflect additional commentary as part of the actual solution as opposed to commentary from the graders.
+
+# I begin by loading the data, converting the target to 0-1, and loading four libraries.
+
+```{r}
+# Loading data
+df <- read.csv(file="December 13 data.csv")
+df$value_flag <- ifelse(df$value_flag == "High",1,0)
+summary(df)
+str(df)
+
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(caret)
+
+```
+
+# I observe that there are no missing values other than those indicated by Group NA for occupation.
+
+# I removed the code provided by my assistant. It is embedded in later chunks as needed.
+
+TASK 1
+
+> The best candidates altered the code to create more appropriate plots and summary tables.
+
+# I begin by removing applicants under age 25 and then making plots of eight of the variables.
+
+> Candidates were not required to make a plot for cap_gain. This solution has the plot made here rather than in Task 6.
+
+```{r}
+# removing aplicants under age 25
+df <- df[df$age >= 25,]
+
+
+#Histograms of continuous variables
+
+ggplot(df, aes(x = age)) +
+  geom_histogram(breaks = seq(24.5,99.5, by = 5)) 
+  labs(x = "Age") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(df, aes(x = education_num)) +
+  geom_histogram(bins = 16) +
+  labs(x = "Education") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+# Set bins equal to number of levels, could have made bar chart.
+
+ggplot(df, aes(x = hours_per_week)) +
+  geom_histogram(bins = 30) +
+  labs(x = "Hours per week") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(df, aes(x = cap_gain)) +
+  geom_histogram(bins = 30) +
+  labs(x = "Capital gains") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(df, aes(x = score)) +
+  geom_histogram(bins = 30) +
+  labs(x = "Score") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+#Bar charts of factor variables
+
+ggplot(df, aes(x = marital_status)) +
+  geom_bar() +
+  labs(x = "Marital Status") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(df, aes(x = occupation)) +
+  geom_bar() +
+  labs(x = "Occupation") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(df, aes(x = value_flag)) +
+  geom_bar() +
+  labs(x = "Value flag") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+# I observe the following:
+
+# cap_gain is highly skewed, but I've been asked to leave that alone.
+# Data are not imbalanced with regard to 0s and 1s for value_flag.
+# There are some really low and high values for hours per week, but I have no reason to question them.
+# Some of the marital status categories have few observations. I'll consider that further after doing some more exploraiton.
+# The following chunk relates predictors to the target for the factor variables. 
+
+```{r}
+#Proportion of ones by category of factor variable
+df %>%
+  group_by(marital_status) %>%
+  summarise(
+    zeros = sum(value_flag == 0),
+    ones = sum(value_flag == 1),
+    n = n(),
+    proportion = mean(value_flag)
+  )
+
+df %>%
+  group_by(occupation) %>%
+  summarise(
+    zeros = sum(value_flag == 0),
+    ones = sum(value_flag == 1),
+    n = n(),
+    proportion = mean(value_flag)
+  )
+
+```
+
+# Martial status is clearly an important predictor. The first two married statuses have similar proportions and with only 31 observations in one of them, they will be combined into Married-spouse. I will also set the base level as the category with the most observations.
+
+# The occupation groups other than NA seem to be ordered by the target, not sure why, but will want to keep Group 1 as the base. I'm going to keep Group NA as I need it to make predictions for those with no identified occupation. 
+
+# The following code makes the above changes.
+
+```{r}
+#Combine the two marital status levels
+var.levels <- levels(df$marital_status)
+df$marital_status <- mapvalues(df$marital_status,var.levels,c("Divorced", "Married-spouse", "Married-spouse","Married-spouse-absent", "Never-married", "Separated","Widowed")) 
+# I don't need to retain the original variable.
+table(df$marital_status)
+
+#Change base level
+table <- as.data.frame(table(df$marital_status))
+max <- which.max(table[,2])
+level.name <- as.character(table[max,1])
+df$marital_status <- relevel(df$marital_status, ref = level.name)
+table(df$marital_status)
+```
+
+# Examine continuous variables vs the target variable.
+
+```{r}
+ggplot(
+  df,
+  aes(
+    x = age,
+    group = value_flag,
+    fill = as.factor(value_flag),
+    y = ..density..
+  )
+) +
+  geom_histogram(position = "dodge", binwidth = 1)
+
+ggplot(
+  df,
+  aes(
+    x = education_num,
+    group = value_flag,
+    fill = as.factor(value_flag),
+    y = ..density..
+  )
+) +
+  geom_histogram(position = "dodge", binwidth = 1)
+
+ggplot(
+  df,
+  aes(
+    x = cap_gain,
+    group = value_flag,
+    fill = as.factor(value_flag),
+    y = ..density..
+  )
+) +
+  geom_histogram(position = "dodge", bins = 30)
+
+ggplot(
+  df,
+  aes(
+    x = score,
+    group = value_flag,
+    fill = as.factor(value_flag),
+    y = ..density..
+  )
+) +
+  geom_histogram(position = "dodge", bins = 30)
+
+ggplot(
+  df,
+  aes(
+    x = hours_per_week,
+    group = value_flag,
+    fill = as.factor(value_flag),
+    y = ..density..
+  )
+) +
+  geom_histogram(position = "dodge", bins = 30)
+
+```
+
+# Age clearly makes a difference as older individuals are more likely to be high value.
+# Higher education implies higher value.
+# It appears that higher capital gains leads to higher value, but the skewness makes it hard to tell.
+# Score seems to make a slight difference, but not as pronounced as the others.
+
+# No further changes will be made.
+
+TASK 2
+
+> Candidates were not expected to modify the code that splits the data. Using the 70%/30% split was acceptable.
+
+# Before constructing a tree, the data will be split into training and testing sets.
+
+```{r}
+set.seed(22)
+train_ind <-createDataPartition(df$value_flag, p = 0.7, list = FALSE) 
+data.train <- df[train_ind,]
+data.test <- df[-train_ind,]
+print("TRAIN")
+mean(data.train$value_flag)
+print("TEST")
+mean(data.test$value_flag)
+rm(train_ind)
+```
+
+# I want to build a classification tree by varying the parameters.
+# Using the provided parameters the test AUC is 0.8448 and is actually better than with the training set, indicating overfitting may not be a problem. But the tree is complex.
+# Next try is maxdepth = 5 to get a simpler tree. Tree is nice to view and AUC = 0.8443.
+# Next try is maxdepth = 4. AUC = 0.8283. Seems too simple and AUC is dropping off.
+# So, keep maxdepth = 5 but cp = 0.002. AUC changes to 0.8442 and tree not much simpler.
+# Next try is cp = 0.005. AUC drops to 0.8393 and tree looks too simple.
+# Will use maxdepth = 5, cp = 0.001. That is run in the code below.
+
+
+```{r}
+library(rpart)
+library(rpart.plot)
+set.seed(1234)
+
+#Keep maxdepth at 6 or less. The other parameters can be changed as desired to produce the final tree.
+
+tree1 <- rpart(as.factor(value_flag) ~ .,
+  data = data.train,
+  method = "class",
+  control = rpart.control(minbucket = 5, cp = 0.001, maxdepth = 5),
+  parms = list(split = "gini")
+)
+
+tree1
+rpart.plot(tree1)
+
+# See how well it fits the data used to train the model.
+pred <- predict(tree1, type = "class", data = data.train)
+confusionMatrix(pred, factor(data.train$value_flag))
+
+# See how well the model performs on the test data.
+pred.test <- predict(tree1, type = "class", newdata = data.test)
+confusionMatrix(pred.test, factor(data.test$value_flag))
+
+# Construct ROC and calculate AUC for the training data.
+library(pROC)
+
+preds.prob <- predict(tree1, type = "prob", data = data.train)
+
+roc <- roc(data.train$value_flag, preds.prob[, 2])
+
+par(pty = "s") # This improves the roc plot
+
+plot(roc)
+pROC::auc(roc) # The addition of pROC:: to the code ensures that the auc function from that package is used. Other packages also have this function.
+
+# Construct ROC and calculate AUC for the test data.
+
+preds.prob.test <- predict(tree1, type = "prob", newdata = data.test)
+
+roc <- roc(data.test$value_flag, preds.prob.test[, 2])
+
+plot(roc)
+
+pROC::auc(roc)
+```
+
+# I now use cross-validation to set cp. Will begin with maxdepth = 6. 
+# Tree is complex and AUC is 0.8604.
+# Will try maxdepth = 5. The AUC is 0.8444. This is similar to the first tree but slightly more complex as the cp value was selected to be 0. I'll stay with the first tree.
+
+# From that tree is appears there is an interaction between marital status and education. For those that are married with a spouse present education matters, otherwise it does not.
+
+```{r}
+#This set up for y (the target) and x (the predictors) produces a more accurate model. If any changes were made to variable names, the list after varlist <- should be edited.
+
+set.seed(6)
+
+target <- factor(data.train$value_flag)
+varlist <- c("age", "education_num", "marital_status", "occupation", "cap_gain", "hours_per_week", "score")
+predictors <- data.train[, varlist]
+
+Grid <- expand.grid(cp = seq(0, 0.01, 0.0005)) # sets the range of cp values to check rather than have the program use default values.
+
+fitControl <- trainControl(method = "cv", number = 6) # Do not change this
+tree2 <- train(
+  y = target,
+  x = predictors,
+  method = "rpart",
+  trControl = fitControl,
+  control = rpart.control(maxdepth = 5), # Do not use a value greater than 6.
+  metric = "Accuracy",
+  tuneGrid = Grid,
+  na.action = na.omit,
+  parms = list(split = "gini")
+)
+tree2$results
+tree2$finalModel
+
+plot(tree2)
+rpart.plot(tree2$finalModel, extra = 4)
+
+pred2 <- predict(tree2, type = "raw")
+confusionMatrix(pred2, factor(data.train$value_flag))
+
+pred2.test <- predict(tree2, type = "raw", newdata = data.test)
+confusionMatrix(pred2.test, factor(data.test$value_flag))
+
+# Construct ROC and calculate AUC for the training data.
+
+pred2.prob <- predict(tree2, type = "prob", data = data.train)
+
+roc <- roc(data.train$value_flag, pred2.prob[, 2])
+par(pty = "s")
+plot(roc)
+
+pROC::auc(roc)
+
+# Construct ROC and calculate AUC for the test data.
+
+pred2.prob.test <- predict(tree2, type = "prob", newdata = data.test)
+
+roc <- roc(data.test$value_flag, pred2.prob.test[, 2])
+
+plot(roc)
+
+pROC::auc(roc)
+```
+TASK 3
+
+# I now run a boosted tree.
+
+# The AUC is 0.8991. This is higher than the previous tree and I don't care about explaining the model. I'll go with this one.
+
+
+```{r}
+data.train$value_flag <- as.factor(ifelse(data.train$value_flag == 1, "High", "Low")) # xgboost requires factors for the target, will be set back to 0,1 at the end of this analysis.
+data.test$value_flag <- as.factor(ifelse(data.test$value_flag == 1, "High", "Low"))
+```
+
+
+```{r}
+set.seed(42)
+
+# xbgTree allows only numeric data. Hence all factor variables must be binarized. This is done internally in the algorithm and explains why the variable importance list looks at each level of the factor variables.
+
+# Set up the grid.
+xgbGrid <- expand.grid(
+  max_depth = 7,
+  nrounds = 100,
+  eta = c(0.01, 0.1),
+  colsample_bytree = 0.6,
+  gamma = 0,
+  min_child_weight = 1,
+  subsample = 0.6
+  ) # The only tuning will be to try two values of eta.
+
+ctrl <- trainControl(
+  method = "cv", number = 2, 
+  classProbs = TRUE
+) 
+
+model.xgb.tuned <- train(value_flag ~ ., 
+  data = data.train,
+  method = "xgbTree",
+  eval_metric = "error",
+  trControl = ctrl,
+  tuneGrid = xgbGrid
+)
+
+# Check the output
+model.xgb.tuned
+ggplot(model.xgb.tuned)
+
+# Measures against the training set.
+predict.xgb <- predict(model.xgb.tuned, data.train, type = "prob")[,1]
+roc <-roc(as.numeric(data.train$value_flag), predict.xgb)
+imp <- varImp(model.xgb.tuned)
+imp
+plot(imp, top = 15)
+predict.class <- predict(model.xgb.tuned,data.train)
+confusionMatrix(predict.class,data.train$value_flag)
+par(pty = "s")
+plot(roc)
+pROC::auc(roc)
+
+# Measures against the testing set.
+predict.xgb.test <- predict(model.xgb.tuned, data.test, type = "prob")[,1]
+roc <-roc(as.numeric(data.test$value_flag), predict.xgb.test)
+predict.class.test <- predict(model.xgb.tuned,data.test)
+confusionMatrix(predict.class.test,data.test$value_flag)
+plot(roc)
+pROC::auc(roc)
+```
+
+# Return the targets to 0-1.
+
+```{r}
+data.train$value_flag <- ifelse(data.train$value_flag == "High", 1, 0) 
+data.test$value_flag <- ifelse(data.test$value_flag == "High", 1, 0)
+```
+
+
+TASK 4
+
+No Code
+
+TASK 5
+
+No code
+
+TASK 6
+
+# The tree we constructed splits cap_gain at 5095.5 and 7055.5.
+
+
+```{r}
+# This code cuts a continuous variable into buckets. The process is applied to both the training and test sets. 
+
+data.train$cap_gain_cut <- cut(data.train$cap_gain, breaks = c(0, 5095.5, 7055.5, Inf), right = FALSE, labels = c("lowcg", "mediumcg", "highcg"))
+
+data.test$cap_gain_cut <- cut(data.test$cap_gain, breaks = c(0, 5095.5, 7055.5, Inf), right = FALSE, labels = c("lowcg", "mediumcg", "highcg"))
+
+summary(data.train$cap_gain_cut)
+summary(data.test$cap_gain_cut)
+```
+
+TASK 7
+
+No code
+
+TASK 8
+
+# For my GLM I am using the binomial distribution and the logit link. I am using all the available variables, but dropping cap_gain, using only the binned version. I've also added the interaction identified in Task 2.
+
+# I am going to run elastic net with three alpha values and compare results.
+# alpha = 1 AUC = 0.887
+# alpha = 0.5 AUC = 0.887
+# alpha = 0 AUC = 0.8863
+
+# A closer look shows that all but a few of the interaction variable levels are used with lasso, so not surprising results are similar. I'll stick with the lasso just to have some of those levels removed.
+
+
+```{r}
+
+library(glmnet)
+
+set.seed(42)
+
+X <- model.matrix(value_flag ~ . - cap_gain + marital_status*education_num, data.train)
+
+m <- cv.glmnet(
+  x = X, 
+  y = data.train$value_flag,
+  family = "binomial", 
+  type.measure = "class",
+  alpha = 1) # alpha = 1 implies LASSO, alpha = 0 implies ridge, values between 0 and 1 imply elasticnet
+plot(m)
+```
+
+# This chunk fits the model to the full training set using the value of lambda that produced the smallest cross-validation error and obtains some diagnostic results.
+
+```{r}
+
+m.best <- glmnet(
+  x = X, 
+  y = data.train$value_flag,
+  family = "binomial", lambda = m$lambda.min,
+  alpha = 1
+) 
+X.test <- model.matrix(value_flag ~ . - cap_gain + marital_status*education_num,data.test)
+m.best$a0 # Intercept
+m.best$beta # Other coefficients
+
+# Measures against the training set.
+library(pROC)
+m.best.predict <- predict(m.best, newx=X, type = "response")
+roc <-roc(as.numeric(data.train$value_flag), m.best.predict[,1])
+pred.best <- as.factor(1*(m.best.predict > 0.5))
+confusionMatrix(pred.best,as.factor(data.train$value_flag))
+par(pty = "s")
+plot(roc)
+pROC::auc(roc)
+
+# Measures against the test set.
+m.best.predict.test <- predict(m.best, newx=X.test, type = "response")
+roc <-roc(as.numeric(data.test$value_flag), m.best.predict.test[,1])
+pred.best.test <- as.factor(1*(m.best.predict.test > 0.5))
+confusionMatrix(pred.best.test,as.factor(data.test$value_flag))
+plot(roc)
+pROC::auc(roc)
+
+```
+
+
+Task 9
+
+# The AUC for the boosted tree was best. As interpretability is not an issue, it should work for us.
+
+Task 10
+
+This code calculates the expected profit based on a selected cutoff for predicting a high value customer. The instructions will guide you to work with whichever model was selected as the final model. It assumes the code for that model has been run and predictions stored in the variable used in the given code.
+
+> Candidates did not need to repeatedly run the code below with trial and error. Some candidates wrote code to calculate the profit for a sequence of cutoffs between 0 and 1 instead. Some candidates did not earn full points because they did not record evidence of running the code in this file or the report. Candidates should document their work each time they run a chunk if it is important to the work.
+
+# 0.5 -> 43305
+# 0.4 -> 54660
+# 0.3 -> 63240
+# 0.2 -> 62005
+# 0.25 -> 62650
+# 0.28 -> 63050
+# 0.29 -> 63215
+# 0.31 -> 62195
+
+
+# 0.30 is the recommended cutoff.
+
+```{r}
+cutoff <- 0.30 #set the cutoff
+
+# Get the predicted probabilities of being high value in a vector. Remove the comment indicator from the one you want to use.
+# predict.prob <- preds.prob.test[,2] #For using the first tree
+# predict.prob <- pred2.prob.test[,2] #For using the tree with cp set by cross validation
+predict.prob <- predict.xgb.test #For using the boosted tree
+# predict.prob <- m.best.predict.test[,1] #For using the final regularized GLM.
+
+pred.one <- 1*(predict.prob > cutoff)
+cm <- confusionMatrix(factor(pred.one),factor(data.test$value_flag))
+cm$table
+Market.to.high <- 50*cm$table[2, 2]
+Market.to.low <- -25*cm$table[2, 1]
+Do.not.market <- -5*(cm$table[1, 1]+cm$table[1, 2])
+Profit <- Market.to.high + Market.to.low + Do.not.market
+Profit
+
+```
+
+Task 11
+
+> Candidates were expected to modify the code below to create cases that would be informative for marketing. Typically, this meant ensuring a variety of high and low value predictions. 
+
+This task provides a data frame with sample cases. The first case is a baseline case with the (rounded) average value (for numeric variables) or the modal value (for factor variables). Each subsquent row has one variable changed to an alternative value.
+
+This data frame can be combined with the appropriate predict function for your model to provide illustrative predictions.
+
+Note for the predict function to work the sample.data data frame must include the same variables as used in the data frame from which your selected model was developed.
+
+
+# I'll also need to recognize that I created a level for marital_status. 
+
+```{r}
+age_vec <- c(39, 53, 25, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39)
+education_vec <- c(10, 10, 10, 13, 7, 10, 10, 10, 10, 10,10, 10, 10)
+martial_vec <- c(
+  "Married-spouse", "Married-spouse", "Married-spouse", 
+  "Married-spouse", "Married-spouse", "Never-married", "Married-spouse", "Married-spouse", 
+  "Married-spouse", "Married-spouse", "Married-spouse","Married-spouse", "Married-spouse"
+)
+occupation_vec <- c(
+  "Group 3", "Group 3", "Group 3","Group 3", "Group 3","Group 3", "Group 5", "Group 1",
+  "Group 3", "Group 3","Group 3", "Group 3", "Group 3"
+)
+cap_gain_vec <- c(0, 0, 0, 0, 0, 0, 0, 0, 6000, 0, 0, 0, 0)
+hours_vec <- c(40, 40, 40, 40, 40, 40, 40, 40, 40, 50, 20, 40, 40)
+score_vec <- c(60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 64, 44)
+
+sample.data <- data.frame(
+  "age" = age_vec,
+  "education_num" = education_vec,
+  "marital_status" = martial_vec,
+  "occupation" = occupation_vec,
+  "cap_gain" = cap_gain_vec,
+  "hours_per_week" = hours_vec,
+  "score" = score_vec
+)
+sample.data
+
+predict.sample <- predict(model.xgb.tuned,sample.data,type="prob")
+predict.sample
+data.frame(sample.data, prob = predict.sample$High, highlow = ifelse(predict.sample$High > .30, "High","Low"))
+```
+

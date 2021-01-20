@@ -1,0 +1,233 @@
+---
+title: "June 13, 2019 Exam PA Rmd file"
+
+---
+Your assistant has provided the following code to load the dataset and assign the base level for each factor variable to the level with the most observations.
+
+```{r}
+# Loading data
+dat <- read.csv(file="June 13 data.csv")
+
+vars <- colnames(dat)[5:14] #variables to relevel
+for (i in vars){
+  table <- as.data.frame(table(dat[,i]))
+  max <- which.max(table[,2])
+  level.name <- as.character(table[max,1])
+  dat[,i] <- relevel(dat[,i], ref = level.name)
+}
+summary(dat) 
+```
+
+TASK 1
+
+This chunk makes boxplots of each variable treating the numeric values as factors.
+
+```{r}
+# Boxplots split by level of each variable.
+ 
+library(ggplot2)
+vars <- colnames(dat)[colnames(dat)!="Crash_Score"]
+for (i in vars) {
+  plot <- ggplot(dat, aes(x=as.factor(dat[,i]),y=Crash_Score)) + geom_boxplot() + labs(x=i)
+  print(plot)
+}
+```
+
+This chunk provides means and medians of the target variable by factor level.
+
+```{r}
+#Means and medians of the target variable split by predictor.
+library(dplyr)
+for (i in vars) {
+  print(i)
+  x <- dat %>% group_by_(i)%>%summarise(mean=mean(Crash_Score),
+                                   median=median(Crash_Score),
+                                   n = n())
+
+  print(x)
+}
+
+```
+
+TASK 2
+
+This chunk makes bar charts that indicate the number of observations at each factor level.
+
+```{r}
+# Bar charts of predictor variables
+
+vars <- colnames(dat)[colnames(dat)!="Crash_Score"]
+for (i in vars) {
+  plot <- ggplot(dat, aes(x=dat[,i])) + geom_bar() + labs(x=i) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  print(plot)
+}
+
+```
+
+The following chunk provides code that can be used to combine factor levels. It also relevels in case the new level has the highest frequency.
+
+```{r}
+#This example combines levels other than SIGNAL of Traffic_Control into a new level called NON-SIGNAL.
+#Execute the function levels(dat$Traffic_Control) to idenity the levels. Be sure the variable is a factor variable before doing this.
+
+dat2<-dat #The results are in a new data frame called dat2. This is done so that the results can be checked without losing the original data frame. When done, consider executing dat <- dat2 so subsequent chunks can run without modification
+
+library(plyr)
+var <- "Traffic_Control"
+var.levels <- levels(dat2[,var])
+dat2[,var] <- mapvalues(dat2[,var],var.levels,c("NON-SIGNAL","NON-SIGNAL","SIGNAL","NON-SIGNAL","NON-SIGNAL"))
+#Relevel
+table <- as.data.frame(table(dat2[,var]))
+  max <- which.max(table[,2])
+  level.name <- as.character(table[max,1])
+  dat2[,var] <- relevel(dat2[,var], ref = level.name)
+
+table(dat2[,var])
+```
+
+TASK 3
+
+The following chunks perform PCA on selected variables. The results may provide some insights with respect to combining variables to create new features. These chunks look at the the three weather variables.
+
+In general there are some challenges in using PCA on factor variables and there are alternative approaches (not covered in this exam) specifically designed for this situation. However, PCA can provide insights through the calculated loadings.
+
+Unlike some R programs, prcomp does not handle factor variables automatically. They must be binarized first. To ensure that all factor levels receive loadings, the binarization does not create a base level. A consequence in the situation run below is that although there are 15 variables (after binarization) only 12 are independent. Hence the first 12 principal components explain all the variation.
+
+```{r}
+#Retain only the variables used for PCA and Binarize them
+datPCA <- dat[,c("Rd_Conditions", "Light", "Weather")]
+
+library(caret)
+
+# dummyVars is not compatible with factors
+varsPCA <- colnames(datPCA)
+for (var in varsPCA) {
+  datPCA[, var] <- as.character(datPCA[, var])
+}
+
+# Binarize variables
+#fullRank = FALSE implies that all values get coded. This is appropriate for PCA (but not for regression) 
+binarizer <- caret::dummyVars(paste("~", paste(varsPCA, collapse = "+")) , data = datPCA, fullRank = FALSE)
+datPCAbin <- data.frame(predict(binarizer, newdata = datPCA))
+head(datPCAbin)
+
+```
+
+
+```{r}
+#Run PCA on the weather variables. Variables are centered and scaled.
+PCAweather <- prcomp(datPCAbin, center = TRUE, scale. = TRUE)
+summary(PCAweather)
+PCAweather$rotation
+```
+
+The following chunk shows how to construct a new feature using insights gained from the loadings. The particular choice of binarized variables and weights are artificial for this illustration and not based on an actual PCA.
+
+```{r}
+#Center and scale the variables
+datPCAbin.std <- as.data.frame(scale(datPCAbin))
+#Create a new feature
+dat2 <- dat #Preserving the original data frame until this work is complete
+dat2$Snow.not.rain <- 0.5*datPCAbin.std$Rd_ConditionsICE.SNOW.SLUSH + .6*datPCAbin.std$WeatherSNOW - .2*datPCAbin.std$WeatherRAIN
+head(dat2$Snow.not.rain)
+
+```
+
+TASK 4
+
+```{r}
+# Visual exploration of interaction. Try pairs that seem intuitively likely to have an interaction. This example uses Rd_Feature and Rd_Class, but they were selected at random.
+
+ggplot(dat,aes(x=Rd_Feature,y=Crash_Score,fill=Rd_Class))+
+  geom_boxplot()+
+  facet_wrap(~Rd_Feature,scale="free")
+```
+
+TASK 5
+
+Establish the train and test sets on the current variables.
+
+```{r}
+#Create train and test sets
+library(caret)
+set.seed(1234)
+partition <- createDataPartition(dat$Crash_Score, list = FALSE, p = .75)
+train <- dat[partition, ]
+test <- dat[-partition, ]
+
+print("TRAIN")
+mean(train$Crash_Score)
+
+print("TEST")
+mean(test$Crash_Score)
+
+```
+
+Your assistant has set up code to run on OLS model and evaluate it using root mean squared error against the test set. When running other GLMs, create a new code chunk for each one.
+
+```{r}
+#OLS on current variables 
+GLMols <- glm(Crash_Score ~ ., family = gaussian(), data = train)
+summary(GLMols)
+print("AIC")
+AIC(GLMols)
+predict <- predict(GLMols,newdata=test,type="response")
+print("RMSE")
+sqrt(sum((test$Crash_Score-predict)^2)/nrow(test))
+
+```
+
+TASK 6
+
+This code runs the stepAIC procdure. It is set up to use the OLS model previously fit along with forward selection and BIC. That does not imply these are the best choices.
+
+Note: When using BIC, decisions about adding or removing variables are made using that criterion. However, the AIC value presented at the end when the final model is run uses the standard AIC penalty of k = 2. 
+
+```{r}
+library(MASS)
+GLMols1 <- glm(Crash_Score ~ 1, family = gaussian(), data = train) #If using forward selection it is necessary to fit a model with no predictors to use as the start.
+stepAIC(GLMols1, direction = "forward", k = log(nrow(train)), scope = list(upper = GLMols, lower = GLMols1)) #For backward selection, the first argument should be GLMols, the full model.
+```
+
+TASK 7
+
+No code is provided.
+
+TASK 8
+
+No code is provided.
+
+TASK 9
+
+The following code runs a GLM using elastic net and cross validation to set lambda.
+
+```{r}
+
+library(glmnet)
+
+set.seed(42)
+
+X <- model.matrix(Crash_Score ~ .,train)
+
+m <- cv.glmnet(x = X, 
+            y = train$Crash_Score,
+            family = "gaussian",
+            alpha = 1) #alpha = 1 implies LASSO, alpha = 0 implies ridge
+plot(m)
+```
+
+This chunk fits the model to the full training set using the value of lambda that produced the smallest cross-validation error, obtains predicted values for the test set, and then determines the mean squared error.
+
+```{r}
+
+m.best <- glmnet(x = X, 
+            y = train$Crash_Score,
+            family = "gaussian", lambda = m$lambda.min,
+            alpha = 1) #alpha = 1 implies LASSO, alpha = 0 implies ridge
+X.test <- model.matrix(Crash_Score ~ .,test)
+m.best$beta
+m.best.predict <- predict(m.best, newx=X.test)
+rmse <- sqrt(sum((m.best.predict - test$Crash_Score)^2)/nrow(test))
+rmse
+
+```

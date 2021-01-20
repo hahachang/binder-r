@@ -1,0 +1,644 @@
+---
+title: "Exam PA June 14 Model Solution"
+
+---
+
+> This Rmd file accompanies the model solution report--please refer to commentary there on use of these documents. Commentary from those grading the exam are shown in this format in the non-code sections of this Rmd file. Candidates were given a template RMD file that contained some code and comments from their assistant. That code is noted in the comments. If the code was run as is, it is left alone. If the code was modified in any way, the original code is commented out and the code that was used appears in the next chunk(s). Candidates were not expected to leave the provided code as is, but could directly modify it for use. 
+
+# Comments in this format are those that reflect additional commentary as part of the actual solution as opposed to commentary from the graders.
+
+Your assistant has discovered that errors can occur if the dplyr package is loaded before the plyr package. Because your assistant has used these packages in some of the code chunks below, you are advised to run this chunk now in case you elect to use these packages later.
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+library(plyr)
+library(dplyr)
+```
+
+Your assistant has provided the following code to load the dataset and assign the base level for each factor variable to the level with the most observations.
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+# Loading data
+dat <- read.csv(file="June 14 data.csv")
+
+vars <- colnames(dat)[5:14] #variables to relevel
+for (i in vars){
+  table <- as.data.frame(table(dat[,i]))
+  max <- which.max(table[,2])
+  level.name <- as.character(table[max,1])
+  dat[,i] <- relevel(dat[,i], ref = level.name)
+}
+summary(dat) 
+```
+
+TASK 1 Explore the relationship of each variable to Crash_Score`
+
+> In addition to the plots given, the best candidates also explored the shape of the target distribution and considered a transformation. Note that using the log transformation in these plots, while helpful for visualization, is not necessary for full points. 
+
+#Construct a histogram of the target variable.
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+library(ggplot2)
+p <- ggplot(dat, aes(x=Crash_Score)) + geom_histogram()
+print(p)
+```
+
+This chunk makes boxplots of each variable treating the numeric values as factors. 
+
+# Because the distribution of the target is skewed to the right, I have elected to plot the log of the target variable.
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+# Boxplots split by level of each variable.
+ 
+#library(ggplot2)
+#vars <- colnames(dat)[colnames(dat)!="Crash_Score"]
+#for (i in vars) {
+  #plot <- ggplot(dat, aes(x=as.factor(dat[,i]),y=Crash_Score)) + #geom_boxplot() + labs(x=i)
+  #print(plot)
+#}
+```
+
+
+```{r}
+# ---- CODE MODIFIED ----
+# Boxplots split by level of each variable.
+# Log of target variable plotted.
+ 
+library(ggplot2)
+vars <- colnames(dat)[colnames(dat)!="Crash_Score"]
+for (i in vars) {
+  plot <- ggplot(dat, aes(x=as.factor(dat[,i]),y=log(Crash_Score))) + geom_boxplot() + labs(x=i)
+  print(plot)
+}
+```
+
+This chunk provides means and medians of the target variable by factor level.
+
+# Code has been modified to provide the calculations using the log of the target variable.
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+#Means of the target variables split by predictor.
+#library(dplyr)
+#for (i in vars) {
+#  print(i)
+#  x <- dat %>% group_by_(i)%>%summarise(mean=mean(Crash_Score),
+#                                   median=median(Crash_Score),
+#                                   n = n())
+
+#  print(x)
+#}
+
+```
+
+
+```{r}
+# ---- CODE MODIFIED ----
+#Means of the target variables split by predictor.
+library(dplyr)
+for (i in vars) {
+  print(i)
+  x <- dat %>% group_by_(i)%>%summarise(mean=mean(log(Crash_Score)),
+                                   median=median(log(Crash_Score)),
+                                   n = n())
+
+  print(x)
+}
+
+```
+
+> Correct interpretation of both the plots and the summary statistics were necessary for full points in Task 1. 
+
+
+TASK 2 Reduce the number of factor levels where appropriate
+
+This chunk makes bar charts that indicate the number of observations at each factor level.
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+# Bar charts of predictor variables
+vars <- colnames(dat)[colnames(dat)!="Crash_Score"]
+for (i in vars) {
+  plot <- ggplot(dat, aes(x=dat[,i])) + geom_bar() + labs(x=i) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  print(plot)
+}
+
+```
+
+The following chunk provides code that can be used to combine factor levels. It also relevels in case the new level has the highest frequency. 
+
+#I've commented out the sample code provided by my assistant.
+
+> Some candidates performed all the changes in one chunk. This is acceptable, though harder to follow. Some candidates did not remember to ensure that when finished all the changes are incorporated into the dataframe that is used in the next task.
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+#This example combines levels other than SIGNAL of Traffic_Control into a new level called NON-SIGNAL.
+#Execute the function levels(dat$Traffic_Control) to idenity the levels. Be sure the variable is a factor variable before doing this.
+
+#dat2<-dat #The results are in a new data frame called dat2. This is done so that the results can be checked without losing the original data frame. When done, consider executing dat <- dat2 so subsequent chunks can run without modification
+
+#library(plyr)
+#var <- "Traffic_Control"
+#var.levels <- levels(dat2[,var])
+#dat2[,var] <- mapvalues(dat2[,var],var.levels,c("NON-SIGNAL","NON-SIGNAL","SIGNAL","NON-SIGNAL","NON-SIGNAL"))
+#Relevel
+#table <- as.data.frame(table(dat2[,var]))
+ # max <- which.max(table[,2])
+  #level.name <- as.character(table[max,1])
+  #dat2[,var] <- relevel(dat2[,var], ref = level.name)
+
+#table(dat2[,var])
+```
+
+# Change 1: Time_of_Day: 1 = OVERNIGHT, 2 and 6 = LATE-EARLY, 3-5 = DAYTIME
+# First must make this a factor variable.
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+dat$Time_of_Day <- as.factor(dat$Time_of_Day)
+levels(dat[,"Time_of_Day"])
+```
+
+
+```{r}
+# ---- CODE MODIFIED ----
+# I am repeating this code to make several changes in the factor levels.
+dat2 <- dat
+var <- "Time_of_Day"
+dat2[,var] <- as.factor(dat2[,var])
+var.levels <- levels(dat2[,var])
+dat2[,var] <- mapvalues(dat2[,var],var.levels,c("OVERNIGHT","LATE-EARLY","DAYTIME","DAYTIME","DAYTIME", "LATE-EARLY"))
+#Relevel
+table <- as.data.frame(table(dat2[,var]))
+  max <- which.max(table[,2])
+  level.name <- as.character(table[max,1])
+  dat2[,var] <- relevel(dat2[,var], ref = level.name)
+table(dat2[,var])
+
+```
+
+# The table confirms that the desired changes were made. The next chunk copies dat2 to dat to ensure the change is saved and that identical style code can be used for the next change.
+
+# Change 2. Rd_Feature as INTERSECTION-RAMP, OTHER
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+dat <- dat2
+levels(dat[,"Rd_Feature"])
+```
+
+
+```{r}
+# ---- CODE MODIFIED ----
+dat2 <- dat
+var <- "Rd_Feature" 
+dat2[,var] <- as.factor(dat2[,var])
+var.levels <- levels(dat2[,var])
+dat2[,var] <- mapvalues(dat2[,var],var.levels,c("OTHER","OTHER","INTERSECTION-RAMP","OTHER","INTERSECTION-RAMP"))
+#Relevel
+table <- as.data.frame(table(dat2[,var]))
+  max <- which.max(table[,2])
+  level.name <- as.character(table[max,1])
+  dat2[,var] <- relevel(dat2[,var], ref = level.name)
+table(dat2[,var])
+```
+
+# Change 3. Rd_Character to just STRAIGHT, CURVE, and OTHER
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+dat <- dat2
+levels(dat[,"Rd_Character"])
+```
+
+
+```{r}
+# ---- CODE MODIFIED ----
+dat2 <- dat
+var <- "Rd_Character" 
+dat2[,var] <- as.factor(dat2[,var])
+var.levels <- levels(dat2[,var])
+dat2[,var] <- mapvalues(dat2[,var],var.levels,c("STRAIGHT","CURVE","CURVE","OTHER","OTHER","STRAIGHT","OTHER"))
+#Relevel
+table <- as.data.frame(table(dat2[,var]))
+  max <- which.max(table[,2])
+  level.name <- as.character(table[max,1])
+  dat2[,var] <- relevel(dat2[,var], ref = level.name)
+table(dat2[,var])
+```
+
+# Change 4. Traffic_Control combine SIGNAL and STOP-SIGN into one and the rest into OTHER.
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+dat <- dat2
+levels(dat[,"Traffic_Control"])
+```
+
+
+```{r}
+# ---- CODE MODIFIED ----
+var <- "Traffic_Control" 
+dat2[,var] <- as.factor(dat2[,var])
+var.levels <- levels(dat2[,var])
+dat2[,var] <- mapvalues(dat2[,var],var.levels,c("OTHER","OTHER","CONTROLLED","CONTROLLED","CONTROLLED"))
+#Relevel
+table <- as.data.frame(table(dat2[,var]))
+  max <- which.max(table[,2])
+  level.name <- as.character(table[max,1])
+  dat2[,var] <- relevel(dat2[,var], ref = level.name)
+table(dat2[,var])
+```
+
+# Return to dat and check a data summary to ensure everything was done as intended.
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+dat <- dat2
+summary(dat)
+```
+
+TASK 3 Use observations from principal components analysis (PCA) to generate a new feature 
+
+The following chunks perform PCA on selected variables. The results may provide some insights with respect to combining variables to create new features. These chunks look at the the three weather variables.
+
+In general there are some challenges in using PCA on factor variables and there are alternative approaches (not covered in this exam) specifically designed for this situation. However, PCA can provide insights through the calculated loadings.
+
+Unlike some R programs, prcomp does not handle factor variables automatically. They must be binarized first. To ensure that all factor levels receive loadings, the binarization does not create a base level. A consequence in the situation run below is that although there are 15 variables (after binarization) only 12 are independent. Hence the first 12 principal components explain all the variation.
+
+> The first two chunks should be run as provided to set up the PCA.
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+#Retain only the variables used for PCA and Binarize them
+datPCA <- dat[,c("Rd_Conditions", "Light", "Weather")]
+
+library(caret)
+
+# dummyVars is not compatible with factors
+varsPCA <- colnames(datPCA)
+for (var in varsPCA) {
+  datPCA[, var] <- as.character(datPCA[, var])
+}
+
+# Binarize variables
+#fullRank = FALSE implies that all values get coded. This is appropriate for PCA (but not for regression) 
+binarizer <- caret::dummyVars(paste("~", paste(varsPCA, collapse = "+")) , data = datPCA, fullRank = FALSE)
+datPCAbin <- data.frame(predict(binarizer, newdata = datPCA))
+head(datPCAbin)
+
+```
+
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+#Run PCA on the weather variables. Variables are centered and scaled.
+PCAweather <- prcomp(datPCAbin, center = TRUE, scale. = TRUE)
+summary(PCAweather)
+PCAweather$rotation
+```
+
+The following chunk shows how to construct a new feature using insights gained from the loadings. The particular choice of binarized variables and weights are artificial for this illustration and not based on an actual PCA.
+
+> The code below was given to the candidates, but the artificial weights and variables should be replaced with the appropriate weights and variables found in the PCA output. 
+
+# I have modified this chunk to create a new variable called WETorDRY and then deleted Rd_Conditions and Weather.
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+#Center and scale the variables
+#datPCAbin.std <- as.data.frame(scale(datPCAbin))
+#Create a new feature
+#dat2 <- dat #Preserving the original data frame until this work is complete
+#dat2$Snow.not.rain <- 0.5*datPCAbin.std$Rd_ConditionsICE.SNOW.SLUSH + .6*datPCAbin.std$WeatherSNOW - .2*datPCAbin.std$WeatherRAIN
+#head(dat2$Snow.not.rain)
+
+```
+
+
+```{r}
+# ---- CODE MODIFIED ----
+#Center and scale the variables
+datPCAbin.std <- as.data.frame(scale(datPCAbin))
+#Create a new feature
+dat2 <- dat #Preserving the original data frame until this work is complete
+dat2$WETorDRY <- -0.51*datPCAbin.std$Rd_ConditionsDRY + 0.5*datPCAbin.std$Rd_ConditionsWET - 0.46*datPCAbin.std$WeatherCLEAR + 0.43*datPCAbin.std$WeatherRAIN
+summary(dat2$WETorDRY)
+
+```
+
+> The code above was modified based on the output of the PCA. Remembering to drop the variables used in the new generated feature is important, otherwise no data reduction is actually acheived and the GLM will produce an error message to a rank-deficient matrix. 
+
+# Return from dat2 to dat and drop the two variables used to create the new one.
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+dat <- dat2
+dat$Rd_Conditions <- NULL
+dat$Weather <- NULL
+summary(dat)
+```
+
+TASK 4 Select an interaction
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+# Visual exploration of interaction. Try pairs that seem intuitively likely to have an interaction. This example uses Rd_Feature and Rd_Class, but they were selected at random.
+
+#ggplot(dat,aes(x=Rd_Feature,y=Crash_Score,fill=Rd_Class))+
+ # geom_boxplot()+
+  #facet_wrap(~Rd_Feature,scale="free")
+```
+
+# First attempt for an interaction is Rd_Character and Rd_Class. I have again used the log of the target.
+
+```{r}
+# ---- CODE MODIFIED ----
+
+ggplot(dat,aes(x=Rd_Character,y=log(Crash_Score),fill=Rd_Class))+
+  geom_boxplot()+
+  facet_wrap(~Rd_Character,scale="free")
+```
+
+TASK 5 Select a distribution and link function
+
+Establish the train and test sets on the current variables.
+
+> Candidates were not expected to modify this chunk. Using the 75%/25% split was acceptable.
+
+> At this point Year and Month are numeric variables. (Some candidates had already converted them to factor variables.) As explained in the report, Year is left numeric, but Month converted to factor. 
+
+# I converted Month to a factor variable as it is unlikely there is a linear relationship with month number.
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+dat$Month <- as.factor(dat$Month)
+levels(dat$Month)
+```
+
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+#Create train and test sets
+library(caret)
+set.seed(1234)
+partition <- createDataPartition(dat$Crash_Score, list = FALSE, p = .75)
+train <- dat[partition, ]
+test <- dat[-partition, ]
+
+print("TRAIN")
+mean(train$Crash_Score)
+
+print("TEST")
+mean(test$Crash_Score)
+
+```
+
+Your assistant has set up code to run on OLS model and evaluate it using root mean squared error against the test set. When running other GLMs, create a new code chunk for each one.
+
+> It was not necessary to run the OLS model as Task 5 asked only asked that the proposed models be evaluated. Running this chunk does provide a benchmark to see if the subsequent chunks are producing reasonable output.
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+#OLS on current variables 
+GLMols <- glm(Crash_Score ~ ., family = gaussian(), data = train)
+summary(GLMols)
+print("AIC")
+AIC(GLMols)
+predict <- predict(GLMols,newdata=test,type="response")
+print("RMSE")
+sqrt(sum((test$Crash_Score-predict)^2)/nrow(test))
+
+```
+
+> The code given above can be modified with various distribution families and link functions. A new chunk should be produced for each model fit. The dataframe used should include the modifications made in Tasks 2 and 3. The interaction from Task 4 should be added in the model specification. Some candidates created the interaction variable and added it to the dataframe at the end of Task 4. That is acceptable.
+
+> It is a good idea to use a descriptive model name for each new model created. This reduces the chances that incorrect summary statistics are calculated.
+
+# This GLM uses a Gamma distribution and the log link. The interaction has been added.
+
+```{r}
+# ---- CODE MODIFIED ----
+GLMgamma <- glm(Crash_Score ~ . + Rd_Character:Rd_Class, family = Gamma(link = "log"), data = train)
+summary(GLMgamma)
+print("AIC")
+AIC(GLMgamma)
+predict <- predict(GLMgamma,newdata=test,type="response")
+print("RMSE")
+sqrt(sum((test$Crash_Score-predict)^2)/nrow(test))
+
+```
+
+# This GLM uses an inverse Gaussian distribution and the log link. The interaction has been added. There turns out to be no convergence. This code has been commented out so that the entire file can be run without error.
+
+```{r}
+# ---- CODE MODIFIED ----
+#GLMig <- glm(Crash_Score ~ . + Work_Area:Rd_Feature, family = inverse.gaussian(link = "log"), data = train)
+#summary(GLMig)
+#print("AIC")
+#AIC(GLMig)
+#predict <- predict(GLMig,newdata=test,type="response")
+#print("RMSE")
+#sqrt(sum((test$Crash_Score-predict)^2)/nrow(test))
+```
+
+# This GLM uses a normal distribution and the log link. The interaction has been added. 
+
+```{r}
+# ---- CODE MODIFIED ----
+
+GLMnorm <- glm(Crash_Score ~ . + Rd_Character:Rd_Class, family = gaussian(link = "log"), data = train)
+summary(GLMnorm)
+print("AIC")
+AIC(GLMnorm)
+predict <- predict(GLMnorm,newdata=test,type="response")
+print("RMSE")
+sqrt(sum((test$Crash_Score-predict)^2)/nrow(test))
+
+```
+
+TASK 6 Select features using AIC or BIC
+
+This code runs the stepAIC procdure. It is set up to use the OLS model previously fit along with forward selection and BIC. That does not imply these are the best choices.
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+#library(MASS)
+#GLMols1 <- glm(Crash_Score ~ 1, family = gaussian(), data = train) #If using forward selection it is necessary to fit a model with no predictors to use as the start.
+#stepAIC(GLMols1, direction = "forward", k = log(nrow(train)), scope = list(upper = GLMols, lower = GLMols1)) #For backward selection, the first argument should be GLMols, the full model.
+```
+
+> The candidate must ensure that the distribution and link function recommended in Task 5 is used here.The code above has been modified to use the gamma model with the log link along with forward selection
+
+# The following code uses the gamma/log model along with BIC and forward selection.
+
+```{r}
+# ---- MODIFIED CODE ----
+library(MASS)
+GLMgamma1 <- glm(Crash_Score ~ 1, family = Gamma(link = "log"), data = train) 
+#Sets up the null model for use with forward selection. The full model was obtained in Task 5.
+stepAIC(GLMgamma1, direction = "forward", k = log(nrow(train)), scope = list(upper = GLMgamma, lower = GLMgamma1)) 
+```
+
+# I next run this model to ensure everything looks right and draw any final conclusions.
+
+> Validation is not necessary as this is done in the next step. Candidates could provide the same observations as part of Task 7.
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+#Gamma/log model on reduced variables 
+GLMgammaR <- glm(Crash_Score ~ Rd_Configuration + Rd_Feature + Time_of_Day + Traffic_Control, family = Gamma(link = "log"), data = train)
+summary(GLMgammaR)
+print("AIC")
+AIC(GLMgammaR)
+predict <- predict(GLMgammaR,newdata=test,type="response")
+print("RMSE")
+sqrt(sum((test$Crash_Score-predict)^2)/nrow(test))
+
+```
+
+TASK 7 Validate the model
+
+> No code was given to the candidate for this task. The best candidates used this space to run the full model, evaluate the RMSE, and produce quality diagnostic plots. 
+
+# The following code fits the gamma GLM with the log link and the four variables identified from stepAIC.
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+#Gamma model on reduced variables 
+GLMgammaR <- glm(Crash_Score ~ Rd_Configuration + Rd_Feature + Time_of_Day + Traffic_Control, family = Gamma(link = "log"), data = train)
+summary(GLMgammaR)
+print("AIC")
+AIC(GLMgammaR)
+predict <- predict(GLMgammaR,newdata=test,type="response")
+print("RMSE")
+sqrt(sum((test$Crash_Score-predict)^2)/nrow(test))
+
+```
+
+# The next chunk makes some plots that evaluate the model.
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+plot(GLMgammaR)
+```
+
+TASK 8 Interpret the model
+
+> No code was given for this task. The best candidates were careful to run the model on the full data set. 
+
+# This chunk runs the model from the previous task on the full dataset.
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+#Gamma model on reduced variables with full dataset
+GLMgammaRdat <- glm(Crash_Score ~ Rd_Configuration + Rd_Feature + Time_of_Day + Traffic_Control, family = Gamma(link = "log"), data = dat)
+summary(GLMgammaRdat)
+
+```
+
+TASK 9 Investigate ridge and LASSO regressions
+
+The following code runs a GLM using the LASSO and cross validation to set lambda. 
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+#library(glmnet)
+
+#set.seed(42)
+
+#X <- model.matrix(Crash_Score ~ .,train)
+
+#m <- cv.glmnet(x = X, 
+         #   y = train$Crash_Score,
+        #    family = "gaussian",
+         #   alpha = 1) #alpha = 1 implies LASSO, alpha = 0 implies ridge
+#plot(m)
+```
+
+# The interaction term has been added. This chunk performs LASSO regression.
+
+```{r}
+# ---- CODE MODIFIED ----
+library(glmnet)
+
+set.seed(42)
+
+X <- model.matrix(Crash_Score ~ . + Rd_Character:Rd_Class,train)
+
+m <- cv.glmnet(x = X, 
+            y = train$Crash_Score,
+            family = "gaussian",
+            alpha = 1) #alpha = 1 implies LASSO, alpha = 0 implies ridge
+plot(m)
+```
+
+This chunk fits the model to the full training set using the value of lambda that produced the smallest cross-validation error, obtains predicted values for the test set, and then determines the mean squared error.
+
+```{r}
+# ---- CODE PROVIDED TO CANDIDATES ----
+# m.best <- glmnet(x = X, 
+#             y = train$Crash_Score,
+#             family = "gaussian", lambda = m$lambda.min,
+#             alpha = 1) #alpha = 1 implies LASSO, alpha = 0 implies ridge
+# X.test <- model.matrix(Crash_Score ~ .,test)
+# m.best$beta
+# m.best.predict <- predict(m.best, newx=X.test)
+# rmse <- sqrt(sum((m.best.predict - test$Crash_Score)^2)/nrow(test))
+# rmse
+
+```
+
+# This chunk completes the LASSO analysis.
+
+```{r}
+# ---- CODE MODIFIED ----
+m.best <- glmnet(x = X, 
+            y = train$Crash_Score,
+            family = "gaussian", lambda = m$lambda.min,
+            alpha = 1)
+X.test <- model.matrix(Crash_Score ~ . + Rd_Character:Rd_Class,test)
+m.best$beta
+m.best.predict <- predict(m.best, newx=X.test)
+rmse <- sqrt(sum((m.best.predict - test$Crash_Score)^2)/nrow(test))
+rmse
+
+```
+
+# The next chunks do the same analysis using ridge regression.
+
+> The alpha value needed to be adjusted in the code below to run the Ridge model. The best candidates had code that clearly showed that both the LASSO and ridge regressions were run. 
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+library(glmnet)
+
+set.seed(42)
+
+X <- model.matrix(Crash_Score ~ . + Rd_Character:Rd_Class,train)
+
+m <- cv.glmnet(x = X, 
+            y = train$Crash_Score,
+            family = "gaussian",
+            alpha = 0) #alpha = 1 implies LASSO, alpha = 0 implies ridge
+plot(m)
+```
+
+
+```{r}
+# ---- ADDITIONAL CODE CREATED ----
+m.best <- glmnet(x = X, 
+            y = train$Crash_Score,
+            family = "gaussian", lambda = m$lambda.min,
+            alpha = 0)
+X.test <- model.matrix(Crash_Score ~ . + Rd_Character:Rd_Class,test)
+m.best$beta
+m.best.predict <- predict(m.best, newx=X.test)
+rmse <- sqrt(sum((m.best.predict - test$Crash_Score)^2)/nrow(test))
+rmse
+
+```
