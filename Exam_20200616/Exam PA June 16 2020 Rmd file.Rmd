@@ -1,0 +1,453 @@
+---
+title: "June 16, 2020 Exam PA Rmd file"
+
+---
+Your assistant has provided the following code to load the dataset and provide summary values.
+
+```{r}
+# Load packages and data
+
+# Load packages
+library(plyr)
+library(dplyr)
+
+# Load data
+data.all <- read.csv(file = "June 16 data.csv")
+summary(data.all)
+str(data.all)
+```
+
+TASK 1
+
+Edit the data for missing and invalid data.
+
+Generic code has been provided to edit the data. You can modify and use some or all of this code to edit the data.
+
+Convert numeric variable type to factor variable type
+
+```{r}
+# Replace VARIABLE with the variable name of the variable to be changed.
+
+data.all$VARIABLE <- as.factor(data.all$VARIABLE) # Replace VARIABLE twice
+str(data.all)
+```
+
+Remove variables / columns
+
+```{r}
+# Replace VARIABLE with the variable name of the variable to be removed.
+
+data.all$VARIABLE <- NULL # Replace VARIABLE
+head(data.all)
+```
+
+Remove observations / rows
+
+```{r}
+
+# Replace VARIABLE with the variable name with values to be removed.
+# Replace VALUE with the value of the variable to be removed.
+
+data.all <- subset(data.all, VARIABLE != "VALUE") # Replace VARIABLE and VALUE
+# Value is in quotation marks for factor variables. No quotation marks for numeric variables.
+
+data.all$VARIABLE <- droplevels(data.all$VARIABLE) # If VARIABLE is a factor variable this must be run else the dropped factor level will be retained, but with zero observations.
+
+summary(data.all$VARIABLE)
+```
+
+Combine variable levels
+
+```{r}
+# Replace VARIABLE with the variable name to have reduced number of levels.
+# Replace LEVELs with new level names.
+
+print("Data Before Combine Levels")
+table(data.all$VARIABLE) # Replace VARIABLE
+
+# Combine levels of VARIABLE by mapping one level to another level
+
+var.levels <- levels(data.all$VARIABLE) # Replace VARIABLE
+data.all$VARIABLE <- mapvalues(
+  data.all$VARIABLE, var.levels,
+  c("LEVEL1", "LEVEL2", "LEVEL3", "LEVEL4", "LEVEL5", "LEVEL6")
+) # Replace VARIABLE twice and replace LEVELs with the new names.
+
+print("Data After Combine Levels")
+table(data.all$VARIABLE) # Replace VARIABLE
+
+rm(var.levels)
+```
+
+Relevel factor variables.
+
+Change list of factor variables if you removed one of the variables or if you converted a numeric variable to a factor variable.
+
+```{r}
+
+vars <- c("gender", "age", "race", "metformin", "insulin", "readmitted") # Change list of factor variables to relevel as needed
+
+for (i in vars) {
+  table <- as.data.frame(table(data.all[, i]))
+  max <- which.max(table[, 2])
+  level.name <- as.character(table[max, 1])
+  data.all[, i] <- relevel(data.all[, i], ref = level.name)
+}
+```
+
+TASK 2
+
+Explore the data. 
+
+Examine the variables and their relationships to the target variable.
+
+Code has been provided to explore the data. You can modify and use some or all of this code to explore the data.
+
+Descriptive statistics
+
+```{r}
+
+summary(data.all)
+```
+
+Bar charts
+
+```{r}
+
+library(ggplot2)
+vars <- colnames(data.all)
+
+for (i in vars) {
+  plot <- ggplot(data.all, aes(x = data.all[, i])) +
+    geom_bar() +
+    labs(x = i) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  print(plot)
+}
+
+rm(i, vars, plot)
+```
+
+Target variable means by predictor variables.
+
+```{r}
+# This chunk provides means of the target variable split by predictors.
+vars <- colnames(data.all)
+
+for (i in vars) {
+  x <- data.all %>%
+    group_by_(i) %>%
+    summarise(
+      mean = mean(days),
+      median = median(days),
+      n = n()
+    )
+
+  print(x)
+}
+
+rm(i, vars, x)
+```
+
+Correlations of the target variable to numeric variables and correlation matrix.
+
+```{r}
+
+# Calculate the correlation matrix for numeric variables
+cor.matrix <- cor(data.all[, sapply(data.all, is.numeric)])
+
+print("Correlation Matrix")
+cor.matrix
+```
+
+Split histograms and boxplots of target by factor variables. 
+
+Copy and add code for other factors as needed.
+
+```{r}
+
+library(gridExtra)
+
+# Explore target days vs. gender.
+
+# Split histogram
+p1 <- ggplot(data.all, aes(
+  x = days,
+  group = gender, fill = gender, y = ..density..
+)) +
+  geom_histogram(position = "dodge", binwidth = 1) # Replace gender twice for other variables
+
+# Boxplot
+p2 <- ggplot(data = data.all, aes(
+  x = gender, y = days,
+  fill = gender
+)) +
+  geom_boxplot(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) # Replace gender twice for other variables
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+TASK 3
+
+Consider two data issues.
+
+No code provided.
+
+TASK 4
+
+Write a data summary for your actuarial manager.
+
+No code provided.
+
+TASK 5
+
+Perform Principal Components Analysis (PCA).
+
+The following chunk performs PCA on numeric variables. 
+
+```{r}
+
+# Select only the variables used for PCA. Do not change this list.
+data.pca <- data.all[, c("num_procs", "num_meds", "num_ip", "num_diags")]
+
+# Run PCA on the numeric variables. Variables are centered and scaled.
+pca <- prcomp(data.pca, center = TRUE, scale. = TRUE)
+summary(pca)
+pca$rotation
+plot(pca, type = "line")
+```
+
+The following chunk constructs a new feature using the first principal component and attaches it to the data frame.
+
+```{r}
+
+# Center and scale the variables
+data.pca.std <- as.data.frame(scale(data.pca))
+head(data.pca.std)
+
+# Add the first principal component to the data frame.
+data.all$PC1 <- pca$x[, 1]
+str(data.all$PC1)
+```
+
+Split the data into training and test data sets.
+
+```{r}
+# Split the data into training and test data sets.
+
+library(caret)
+set.seed(100)
+train_ind <- createDataPartition(data.all$days, p = 0.7, list = FALSE)
+data.train <- data.all[train_ind, ]
+data.test <- data.all[-train_ind, ]
+
+print("TRAIN")
+mean(data.train$days)
+
+print("TEST")
+mean(data.test$days)
+
+print("ALL")
+mean(data.all$days)
+
+
+rm(train_ind)
+```
+
+TASK 6
+
+Construct a decision tree.
+
+Construct an unpruned regression tree. Do not use PC1. Do not change the code.
+
+```{r}
+library(rpart)
+library(rpart.plot)
+set.seed(555)
+
+# Fit the model
+tree1 <- rpart(days ~ . - PC1,
+  data = data.train,
+  method = "anova",
+  control = rpart.control(cp = 0.001, minbucket = 20)
+)
+
+tree1
+
+# Plot the tree
+rpart.plot(tree1)
+
+# Predict on training data
+tree1.pred.train <- predict(tree1, data.train, type = "vector")
+
+# Calculate the Pearson goodness-of-fit statistic on training data
+sum((data.train$days - tree1.pred.train)^2 / tree1.pred.train) / nrow(data.train)
+
+# Predict on test data
+tree1.pred.test <- predict(tree1, data.test, type = "vector")
+
+# Calculate the Pearson goodness-of-fit statistic on test data
+sum((data.test$days - tree1.pred.test)^2 / tree1.pred.test) / nrow(data.test)
+```
+
+Use cost-complexity pruning to produce a reduced tree.
+
+```{r}
+# Display the complexity parameter table and plot for tree1.
+tree1$cptable
+plotcp(tree1)
+```
+
+```{r}
+# Prune the tree by replacing XX with the complexity parameter that will result in eight leaves.
+# If eight is not a possible option, select the largest number less than eight that is possible.
+tree2 <- prune(tree1, cp = XX) # Replace XX.
+
+tree2
+
+# Plot the tree
+rpart.plot(tree2)
+
+# Predict on training data
+tree2.pred.train <- predict(tree2, data.train, type = "vector")
+
+# Calculate the Pearson goodness-of-fit statistic on training data
+sum((data.train$days - tree2.pred.train)^2 / tree2.pred.train) / nrow(data.train)
+
+# Predict on test data
+tree2.pred.test <- predict(tree2, data.test, type = "vector")
+
+# Calculate the Pearson goodness-of-fit statistic on test data
+sum((data.test$days - tree2.pred.test)^2 / tree2.pred.test) / nrow(data.test)
+```
+
+TASK 7
+
+Construct a generalized linear model (GLM).
+
+Fit a GLM with all original variables included but excluding the PCA variable. Do not change the Poisson distribution or log link function.
+
+```{r}
+# Fit the model
+glm1 <- glm(days ~ . - PC1,
+  data = data.train,
+  family = poisson(link = "log") # Do not change.
+)
+
+summary(glm1)
+
+# Predict on training data
+glm1.pred.train <- predict(glm1, data.train, type = "response")
+
+# Calculate the Pearson goodness-of-fit statistic on training data
+sum((data.train$days - glm1.pred.train)^2 / glm1.pred.train) / nrow(data.train)
+
+# Predict on test data
+glm1.pred.test <- predict(glm1, data.test, type = "response")
+
+# Calculate the Pearson goodness-of-fit statistic on test data
+sum((data.test$days - glm1.pred.test)^2 / glm1.pred.test) / nrow(data.test)
+```
+
+Fit a GLM with the PCA variable created in Task 5 included (and without the numeric variables used to produce the PCA variable). Do not change the Poisson distribution or log link function.
+
+```{r}
+# Fit the model
+glm2 <- glm(days ~ . - num_procs - num_meds - num_ip - num_diags,
+  data = data.train,
+  family = poisson(link = "log") # Do not change.
+)
+
+summary(glm2)
+
+# Predict on training data
+glm2.pred.train <- predict(glm2, data.train, type = "response")
+
+# Calculate the Pearson goodness-of-fit statistic on training data
+sum((data.train$days - glm2.pred.train)^2 / glm2.pred.train) / nrow(data.train)
+
+# Predict on test data
+glm2.pred.test <- predict(glm2, data.test, type = "response")
+
+# Calculate the Pearson goodness-of-fit statistic on test data
+sum((data.test$days - glm2.pred.test)^2 / glm2.pred.test) / nrow(data.test)
+```
+
+TASK 8
+
+Perform feature selection with lasso regression.
+
+Use cross-validation to determine appropriate level of lambda for lasso regression.
+
+```{r}
+library(glmnet)
+
+# Format data as matrices (necessary for glmnet). Uncomment two items that reflect your decision from Task 7.
+
+# lasso.mat.train <- model.matrix(days ~ . - PC1, data.train)
+# lasso.mat.test <- model.matrix(days ~ . - PC1, data.test)
+# lasso.mat.train <- model.matrix(days ~ . - num_procs - num_meds - num_ip - num_diags, data.train)
+# lasso.mat.test <- model.matrix(days ~ . - num_procs - num_meds - num_ip - num_diags, data.test)
+
+set.seed(789)
+
+lasso.cv <- cv.glmnet(
+  x = lasso.mat.train,
+  y = data.train$days,
+  family = "poisson", # Do not change.
+  alpha = 1 # alpha = 1 for lasso
+)
+```
+
+Use the cross-validation results to run the final lasso regression model.
+
+```{r}
+# Fit the model
+lasso <- glmnet(
+  x = lasso.mat.train,
+  y = data.train$days,
+  family = "poisson", # Do not change.
+  lambda = lasso.cv$lambda.1se,
+  alpha = 1 # alpha = 1 for lasso
+)
+
+# List variables
+lasso$beta
+
+# Predict on training data
+lasso.pred.train <- predict(lasso, lasso.mat.train, type = "response")
+
+# Calculate the Pearson goodness-of-fit statistic on training data
+sum((data.train$days - lasso.pred.train)^2 / lasso.pred.train) / nrow(data.train)
+
+# Predict on test data
+lasso.pred.test <- predict(lasso, lasso.mat.test, type = "response")
+
+# Calculate the Pearson goodness-of-fit statistic on test data
+sum((data.test$days - lasso.pred.test)^2 / lasso.pred.test) / nrow(data.test)
+```
+
+TASK 9
+
+No code provided.
+
+TASK 10
+
+No code provided.
+
+TASK 11
+
+Interpret the model for the client.
+
+Copy the GLM code for the recommended model from Task 7 and run on the full dataset to interpret coefficients.
+
+```{r}
+
+
+
+```
+
+TASK 12
+
+No code provided.
