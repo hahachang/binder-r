@@ -3,5 +3,5 @@ install.packages("rmarkdown")
 install.packages("httr")
 install.packages("shinydashboard")
 install.packages('leaflet')
-install.packages(c("caret", "glmnet", "gridExtra", "rpart", "rpart.plot"))
+install.packages(c("caret", "glmnet", "gridExtra", "rpart", "rpart.plot","plyr"))
 
