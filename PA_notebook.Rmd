@@ -1,0 +1,55 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+#need to install
+```{r,eval=F}
+install.packages(c("boot","data.table","ggplot2","pdp","rpart"))
+install.packages(c("broom","devtools","glmnet","pls","rpart.plot"))
+install.packages(c("caret","dplyr","gridExtra","plyr","tidyverse"))
+install.packages(c("cluster","e1071","ISLR","pROC","xgboost"))
+install.packages(c("coefplot","gbm","MASS","randomForest"))
+```
+
+
+#值錯、標錯(超出邏輯集合、無效標籤)
+1.資料不一定值是NA或空白才是無效資料，
+2.像錯誤標示(tag)也是重點，像性別是unknown的，就可以移除。
+3.weight這個欄位幾乎所有的值都是tag ?,所以將weight欄位移除。
+4.用畫圖的方式來快速瀏覽資料特性
+```{r}
+#Method 1
+summary(data.all)
+
+#Method 2
+str(data.all)
+
+#Method 3
+data.all <- read.csv(file = "June 19 data.csv")
+vars <- colnames(data.all)
+
+for (i in vars) {
+  plot <- ggplot(data.all, aes(x = data.all[, i])) +
+    geom_bar() +
+    labs(x = i) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  print(plot)
+}
+
+
+glimpse.plot <-function(dataset){
+  vars <- colnames(data.all)
+
+  for (i in vars) {
+    plot <- ggplot(dataset, aes(x = data.all[, i])) +
+      geom_bar() +
+      labs(x = i) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    print(plot)
+  }
+}
+
+
+```
+
